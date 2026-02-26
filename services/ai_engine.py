@@ -21,7 +21,12 @@ project_id = os.getenv("GCP_PROJECT_ID") or config.get("GCP_PROJECT_ID")
 location = os.getenv("GCP_LOCATION") or config.get("GCP_LOCATION", "us-central1")  # Default to us-central1
 
 # Support injecting credentials directly as JSON (or base64 JSON) via environment.
-credentials_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+# Accept multiple env var names for deployment platform compatibility.
+credentials_json = (
+    os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    or os.getenv("GOOGLE_CREDENTIALS_BASE64")
+    or os.getenv("GOOGLE_CREDENTIALS_JSON")
+)
 if credentials_json:
     try:
         import base64
