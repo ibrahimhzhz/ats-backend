@@ -31,7 +31,7 @@ from services.tasks import process_resume
 
 # Create Tables + run safe schema migrations
 Base.metadata.create_all(bind=engine)
-run_migrations()
+# run_migrations()
 
 app = FastAPI(
     title="AI Recruiter ATS",
