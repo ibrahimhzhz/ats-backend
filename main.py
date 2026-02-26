@@ -21,6 +21,7 @@ import models
 import zipfile
 import io
 import os
+import base64
 import asyncio
 import re
 import uuid
@@ -478,11 +479,9 @@ async def bulk_screen_resumes(
             with zipfile.ZipFile(zip_saved_path) as zip_file:
                 for member in pdf_files:
                     pdf_bytes = zip_file.read(member)
-                    candidate_path = os.path.join(TEMP_RESUME_DIR, f"{uuid.uuid4()}.pdf")
-                    with open(candidate_path, "wb") as out_pdf:
-                        out_pdf.write(pdf_bytes)
+                    resume_b64 = base64.b64encode(pdf_bytes).decode("ascii")
                     process_resume.delay(
-                        file_path=candidate_path,
+                        resume_b64=resume_b64,
                         job_id=db_job_id,
                         company_id=current_user.company_id,
                     )

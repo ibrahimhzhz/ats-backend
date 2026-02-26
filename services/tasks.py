@@ -1,6 +1,6 @@
 import asyncio
-import os
 import re
+import base64
 from typing import Any, Dict, List
 
 from sqlalchemy import func
@@ -112,93 +112,85 @@ def aggregate_job_results(job_id: int, company_id: int):
 
 
 @celery_app.task(name="process_resume")
-def process_resume(file_path: str, job_id: int, company_id: int):
-    """Process a single resume PDF from disk and persist applicant scoring results."""
-    try:
-        with SessionLocal() as db:
-            try:
-                job = db.query(models.Job).filter(
-                    models.Job.id == job_id,
-                    models.Job.company_id == company_id,
-                ).first()
-                if not job:
-                    return
-
-                with open(file_path, "rb") as f:
-                    pdf_bytes = f.read()
-
-                resume_text = extract_text_from_pdf(pdf_bytes)
-                if not resume_text or len(resume_text.strip()) < 50:
-                    _advance_job_progress(db, job_id, company_id)
-                    return
-
-                email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
-                pre_scan_email = email_match.group(0).lower() if email_match else None
-
-                if pre_scan_email:
-                    duplicate = (
-                        db.query(models.Applicant)
-                        .filter(
-                            models.Applicant.job_id == job_id,
-                            models.Applicant.email == pre_scan_email,
-                        )
-                        .first()
-                    )
-                    if duplicate:
-                        _advance_job_progress(db, job_id, company_id)
-                        return
-
-                candidate_data: Dict[str, Any] = asyncio.run(
-                    extract_candidate_facts(resume_text, job.jd_requirements)
-                )
-
-                result = calculate_deterministic_score(
-                    candidate=candidate_data,
-                    required_skills=job.required_skills or [],
-                    min_experience=float(job.min_experience or 0),
-                    job_title=job.title or "",
-                    raw_resume_text=resume_text,
-                )
-
-                applicant = models.Applicant(
-                    job_id=job_id,
-                    company_id=company_id,
-                    name=candidate_data.get("name", "Unknown"),
-                    email=candidate_data.get("email", pre_scan_email or "N/A"),
-                    phone=candidate_data.get("phone", ""),
-                    resume_text=resume_text[:10000],
-                    resume_pdf=pdf_bytes,
-                    years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
-                    skills=candidate_data.get("skills_with_years", {}),
-                    match_score=result["final_score"],
-                    summary=result["summary"],
-                    status=result["status"],
-                    breakdown=result.get("breakdown"),
-                )
-                db.add(applicant)
-                db.commit()
-
-            except IntegrityError as e:
-                db.rollback()
-                if "uq_applicants_job_email" not in str(e) and "UNIQUE constraint failed: applicants.job_id, applicants.email" not in str(e):
-                    raise
-            finally:
-                try:
-                    _advance_job_progress(db, job_id, company_id)
-                    aggregate_job_results.delay(job_id, company_id)
-                except Exception:
-                    db.rollback()
-    finally:
+def process_resume(resume_b64: str, job_id: int, company_id: int):
+    """Process a single resume PDF payload and persist applicant scoring results."""
+    with SessionLocal() as db:
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception:
-            pass
+            job = db.query(models.Job).filter(
+                models.Job.id == job_id,
+                models.Job.company_id == company_id,
+            ).first()
+            if not job:
+                return
+
+            pdf_bytes = base64.b64decode(resume_b64)
+
+            resume_text = extract_text_from_pdf(pdf_bytes)
+            if not resume_text or len(resume_text.strip()) < 50:
+                _advance_job_progress(db, job_id, company_id)
+                return
+
+            email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
+            pre_scan_email = email_match.group(0).lower() if email_match else None
+
+            if pre_scan_email:
+                duplicate = (
+                    db.query(models.Applicant)
+                    .filter(
+                        models.Applicant.job_id == job_id,
+                        models.Applicant.email == pre_scan_email,
+                    )
+                    .first()
+                )
+                if duplicate:
+                    _advance_job_progress(db, job_id, company_id)
+                    return
+
+            candidate_data: Dict[str, Any] = asyncio.run(
+                extract_candidate_facts(resume_text, job.jd_requirements)
+            )
+
+            result = calculate_deterministic_score(
+                candidate=candidate_data,
+                required_skills=job.required_skills or [],
+                min_experience=float(job.min_experience or 0),
+                job_title=job.title or "",
+                raw_resume_text=resume_text,
+            )
+
+            applicant = models.Applicant(
+                job_id=job_id,
+                company_id=company_id,
+                name=candidate_data.get("name", "Unknown"),
+                email=candidate_data.get("email", pre_scan_email or "N/A"),
+                phone=candidate_data.get("phone", ""),
+                resume_text=resume_text[:10000],
+                resume_pdf=pdf_bytes,
+                years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
+                skills=candidate_data.get("skills_with_years", {}),
+                match_score=result["final_score"],
+                summary=result["summary"],
+                status=result["status"],
+                breakdown=result.get("breakdown"),
+            )
+            db.add(applicant)
+            db.commit()
+
+        except IntegrityError as e:
+            db.rollback()
+            if "uq_applicants_job_email" not in str(e) and "UNIQUE constraint failed: applicants.job_id, applicants.email" not in str(e):
+                raise
+        finally:
+            try:
+                _advance_job_progress(db, job_id, company_id)
+                aggregate_job_results.delay(job_id, company_id)
+            except Exception:
+                db.rollback()
 
 
 @celery_app.task(name="process_public_resume")
 def process_public_resume(
-    file_path: str,
+    resume_b64: str,
     job_id: int,
     company_id: int,
     submitted_name: str,
@@ -209,97 +201,89 @@ def process_public_resume(
     custom_answers: dict | None = None,
 ):
     """Process a public portal submission and increment application_count on success."""
-    try:
-        with SessionLocal() as db:
-            try:
-                job = db.query(models.Job).filter(
-                    models.Job.id == job_id,
-                    models.Job.company_id == company_id,
-                ).first()
-                if not job:
-                    return
-
-                with open(file_path, "rb") as f:
-                    pdf_bytes = f.read()
-
-                resume_text = extract_text_from_pdf(pdf_bytes)
-                if not resume_text or len(resume_text.strip()) < 50:
-                    resume_text = "Unable to extract text from resume."
-
-                duplicate = (
-                    db.query(models.Applicant)
-                    .filter(
-                        models.Applicant.job_id == job_id,
-                        models.Applicant.email == submitted_email,
-                    )
-                    .first()
-                )
-                if duplicate:
-                    return
-
-                candidate_data: Dict[str, Any] = asyncio.run(
-                    extract_candidate_facts(resume_text, job.jd_requirements)
-                )
-
-                if submitted_name and submitted_name.strip():
-                    candidate_data["name"] = submitted_name.strip()
-                candidate_data["email"] = submitted_email.strip().lower()
-                if submitted_phone and submitted_phone.strip():
-                    candidate_data["phone"] = submitted_phone.strip()
-
-                result = calculate_deterministic_score(
-                    candidate=candidate_data,
-                    required_skills=job.required_skills or [],
-                    min_experience=float(job.min_experience or 0),
-                    job_title=job.title or "",
-                    raw_resume_text=resume_text,
-                )
-
-                applicant = models.Applicant(
-                    job_id=job_id,
-                    company_id=company_id,
-                    name=candidate_data.get("name", submitted_name or "Unknown"),
-                    email=candidate_data.get("email", submitted_email),
-                    phone=candidate_data.get("phone", submitted_phone or ""),
-                    resume_text=resume_text[:10000],
-                    resume_pdf=pdf_bytes,
-                    years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
-                    skills=candidate_data.get("skills_with_years", {}),
-                    match_score=result["final_score"],
-                    summary=result["summary"],
-                    status=result["status"],
-                    breakdown=result.get("breakdown"),
-                    linkedin_url=linkedin_url,
-                    portfolio_url=portfolio_url,
-                    custom_answers=custom_answers,
-                )
-                db.add(applicant)
-                db.flush()
-
-                db.query(models.Job).filter(
-                    models.Job.id == job_id,
-                    models.Job.company_id == company_id,
-                ).update(
-                    {"application_count": func.coalesce(models.Job.application_count, 0) + 1}
-                )
-
-                db.commit()
-
-            except IntegrityError as e:
-                db.rollback()
-                if "uq_applicants_job_email" not in str(e) and "UNIQUE constraint failed: applicants.job_id, applicants.email" not in str(e):
-                    raise
-            finally:
-                try:
-                    aggregate_job_results.delay(job_id, company_id)
-                except Exception:
-                    pass
-    finally:
+    with SessionLocal() as db:
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception:
-            pass
+            job = db.query(models.Job).filter(
+                models.Job.id == job_id,
+                models.Job.company_id == company_id,
+            ).first()
+            if not job:
+                return
+
+            pdf_bytes = base64.b64decode(resume_b64)
+
+            resume_text = extract_text_from_pdf(pdf_bytes)
+            if not resume_text or len(resume_text.strip()) < 50:
+                resume_text = "Unable to extract text from resume."
+
+            duplicate = (
+                db.query(models.Applicant)
+                .filter(
+                    models.Applicant.job_id == job_id,
+                    models.Applicant.email == submitted_email,
+                )
+                .first()
+            )
+            if duplicate:
+                return
+
+            candidate_data: Dict[str, Any] = asyncio.run(
+                extract_candidate_facts(resume_text, job.jd_requirements)
+            )
+
+            if submitted_name and submitted_name.strip():
+                candidate_data["name"] = submitted_name.strip()
+            candidate_data["email"] = submitted_email.strip().lower()
+            if submitted_phone and submitted_phone.strip():
+                candidate_data["phone"] = submitted_phone.strip()
+
+            result = calculate_deterministic_score(
+                candidate=candidate_data,
+                required_skills=job.required_skills or [],
+                min_experience=float(job.min_experience or 0),
+                job_title=job.title or "",
+                raw_resume_text=resume_text,
+            )
+
+            applicant = models.Applicant(
+                job_id=job_id,
+                company_id=company_id,
+                name=candidate_data.get("name", submitted_name or "Unknown"),
+                email=candidate_data.get("email", submitted_email),
+                phone=candidate_data.get("phone", submitted_phone or ""),
+                resume_text=resume_text[:10000],
+                resume_pdf=pdf_bytes,
+                years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
+                skills=candidate_data.get("skills_with_years", {}),
+                match_score=result["final_score"],
+                summary=result["summary"],
+                status=result["status"],
+                breakdown=result.get("breakdown"),
+                linkedin_url=linkedin_url,
+                portfolio_url=portfolio_url,
+                custom_answers=custom_answers,
+            )
+            db.add(applicant)
+            db.flush()
+
+            db.query(models.Job).filter(
+                models.Job.id == job_id,
+                models.Job.company_id == company_id,
+            ).update(
+                {"application_count": func.coalesce(models.Job.application_count, 0) + 1}
+            )
+
+            db.commit()
+
+        except IntegrityError as e:
+            db.rollback()
+            if "uq_applicants_job_email" not in str(e) and "UNIQUE constraint failed: applicants.job_id, applicants.email" not in str(e):
+                raise
+        finally:
+            try:
+                aggregate_job_results.delay(job_id, company_id)
+            except Exception:
+                pass
 
 
 @celery_app.task(name="extract_jd_requirements_task")

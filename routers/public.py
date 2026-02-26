@@ -11,10 +11,7 @@ from typing import Optional
 from collections import defaultdict, deque
 import threading
 import time
-import os
-import uuid
-import tempfile
-import shutil
+import base64
 import models
 import schemas
 from database import get_db
@@ -23,7 +20,6 @@ from services.tasks import process_public_resume
 import json
 
 router = APIRouter(prefix="/api/public", tags=["public"])
-TEMP_RESUME_DIR = os.getenv("ATS_RESUME_TMP_DIR", os.path.join(tempfile.gettempdir(), "ats_resumes"))
 
 PUBLIC_APPLY_WINDOW_SECONDS = 60
 PUBLIC_APPLY_LIMIT_PER_IP = 20
@@ -158,19 +154,16 @@ async def submit_public_application(
     if duplicate:
         raise HTTPException(status_code=409, detail="An application with this email already exists for this job")
 
-    os.makedirs(TEMP_RESUME_DIR, exist_ok=True)
-    extension = os.path.splitext(resume.filename or "resume.pdf")[1] or ".pdf"
-    saved_path = os.path.join(TEMP_RESUME_DIR, f"{uuid.uuid4()}{extension}")
-
-    with open(saved_path, "wb") as out_file:
-        shutil.copyfileobj(resume.file, out_file)
-
-    if os.path.getsize(saved_path) > 10 * 1024 * 1024:
-        os.remove(saved_path)
+    resume_bytes = await resume.read()
+    if not resume_bytes:
+        raise HTTPException(status_code=400, detail="Resume file is required")
+    if len(resume_bytes) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Resume file too large (max 10MB)")
 
+    resume_b64 = base64.b64encode(resume_bytes).decode("ascii")
+
     process_public_resume.delay(
-        file_path=saved_path,
+        resume_b64=resume_b64,
         job_id=job.id,
         company_id=job.company_id,
         submitted_name=name,
