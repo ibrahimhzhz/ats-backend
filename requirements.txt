@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+jinja2
+sqlalchemy
+pydantic[email]
+python-dotenv
+pymupdf
+google-cloud-aiplatform
+python-multipart
+celery
+redis
+psycopg2-binary
+# --- Auth ---
+bcrypt
+python-jose[cryptography]

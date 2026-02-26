@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apply for Position | LoqATS Careers</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
+            keyframes: {
+              "fade-in": { 
+                from: { opacity: 0, transform: "translateY(8px)" }, 
+                to: { opacity: 1, transform: "translateY(0)" } 
+              },
+              "pulse-slow": {
+                "0%, 100%": { opacity: 1 },
+                "50%": { opacity: 0.7 }
+              }
+            },
+            animation: {
+              "fade-in": "fade-in 0.3s ease-out",
+              "pulse-slow": "pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      * { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+
+      .bg-slate-900 { background-color: #1e3a8a !important; }
+      .bg-slate-100 { background-color: #dbeafe !important; }
+      .bg-slate-50 { background-color: #eff6ff !important; }
+      .text-slate-900 { color: #0f172a !important; }
+      .text-slate-700 { color: #1e3a8a !important; }
+      .text-slate-600 { color: #1d4ed8 !important; }
+      .text-slate-500 { color: #475569 !important; }
+      .border-slate-300 { border-color: #93c5fd !important; }
+      .border-slate-200 { border-color: #bfdbfe !important; }
+      .hover\:bg-slate-800:hover { background-color: #1d4ed8 !important; }
+      .focus\:ring-slate-900:focus { --tw-ring-color: #1d4ed8 !important; }
+      
+      .drag-over {
+        border-color: #3b82f6 !important;
+        background-color: #eff6ff !important;
+      }
+      
+      .file-selected {
+        border-color: #10b981 !important;
+        background-color: #f0fdf4 !important;
+      }
+    </style>
+  </head>
+  <body class="h-full bg-gradient-to-br from-blue-50 to-blue-100 text-slate-900 antialiased">
+    
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 backdrop-blur">
+      <div class="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center">
+            <i data-lucide="zap" class="w-5 h-5 text-blue-200"></i>
+          </div>
+          <span class="font-semibold text-slate-900 tracking-tight">LoqATS Careers</span>
+        </div>
+        <span class="text-sm text-slate-500">Public Application Portal</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-6 py-12">
+      
+      <!-- Loading State -->
+      <div id="loading-state" class="animate-fade-in text-center py-20">
+        <div class="inline-block w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4"></div>
+        <p class="text-slate-600">Loading job details...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" class="hidden animate-fade-in">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <i data-lucide="alert-circle" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
+          <h2 class="text-xl font-semibold text-red-900 mb-2">Job Not Found</h2>
+          <p class="text-red-700">This job posting is no longer available or the link is incorrect.</p>
+        </div>
+      </div>
+
+      <!-- Success State -->
+      <div id="success-state" class="hidden animate-fade-in">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-8 text-center">
+          <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="check" class="w-8 h-8 text-white"></i>
+          </div>
+          <h2 class="text-2xl font-semibold text-emerald-900 mb-2">Application Received!</h2>
+          <p class="text-emerald-700 mb-6">Thank you for applying. We'll review your application and get back to you soon.</p>
+          <p class="text-sm text-emerald-600">You can safely close this window.</p>
+        </div>
+      </div>
+
+      <!-- Application Form -->
+      <div id="form-container" class="hidden animate-fade-in">
+        
+        <!-- Job Details Card -->
+        <div class="bg-white rounded-lg border border-slate-200 p-8 mb-6 shadow-sm">
+          <h1 id="job-title" class="text-3xl font-bold text-slate-900 mb-4"></h1>
+          <div class="flex items-center gap-4 text-sm text-slate-500 mb-6">
+            <div class="flex items-center gap-1">
+              <i data-lucide="briefcase" class="w-4 h-4"></i>
+              <span id="job-experience"></span>
+            </div>
+            <div class="flex items-center gap-1">
+              <i data-lucide="code" class="w-4 h-4"></i>
+              <span id="job-skills-count"></span>
+            </div>
+          </div>
+          <div id="job-description" class="prose prose-slate max-w-none text-slate-700 leading-relaxed"></div>
+          
+          <!-- Required Skills -->
+          <div class="mt-6">
+            <h3 class="text-sm font-semibold text-slate-900 mb-3">Required Skills</h3>
+            <div id="job-skills" class="flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+
+        <!-- Application Form Card -->
+        <div class="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
+          <h2 class="text-xl font-semibold text-slate-900 mb-6">Submit Your Application</h2>
+          
+          <form id="application-form">
+            
+            <!-- Honeypot Field (hidden from humans, visible to bots) -->
+            <input type="text" name="website_url_catch" style="position: absolute; left: -9999px;" tabindex="-1" autocomplete="off" />
+            
+            <!-- Name -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Full Name <span class="text-red-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="name" 
+                name="name" 
+                required 
+                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                placeholder="John Doe"
+              />
+            </div>
+
+            <!-- Email -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Email Address <span class="text-red-500">*</span>
+              </label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                required 
+                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                placeholder="john@example.com"
+              />
+            </div>
+
+            <!-- Phone -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Phone Number
+              </label>
+              <input 
+                type="tel" 
+                id="phone" 
+                name="phone" 
+                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+
+            <!-- Dynamic Fields Container -->
+            <div id="dynamic-fields"></div>
+
+            <!-- Resume Upload -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Resume (PDF) <span class="text-red-500">*</span>
+              </label>
+              <div 
+                id="drop-zone"
+                class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer hover:border-slate-400 transition"
+              >
+                <input 
+                  type="file" 
+                  id="resume" 
+                  name="resume" 
+                  accept=".pdf" 
+                  required 
+                  class="hidden"
+                />
+                <i data-lucide="upload" class="w-8 h-8 text-slate-400 mx-auto mb-2" id="upload-icon"></i>
+                <p class="text-slate-600 font-medium mb-1" id="upload-text">Click to upload or drag and drop</p>
+                <p class="text-slate-500 text-sm" id="upload-subtext">PDF only (max 10MB)</p>
+                <p class="text-emerald-600 text-sm font-medium mt-2 hidden" id="file-name"></p>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              type="submit" 
+              id="submit-btn"
+              class="w-full bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg hover:bg-slate-800 transition flex items-center justify-center gap-2"
+            >
+              <span>Submit Application</span>
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Loading State for Submit -->
+            <div id="submit-loading" class="hidden w-full bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2">
+              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Processing...</span>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 bg-white mt-16">
+      <div class="max-w-4xl mx-auto px-6 py-8 text-center text-sm text-slate-500">
+        <p>Powered by <span class="font-semibold text-slate-900">LoqATS</span> — AI Recruiting Platform</p>
+      </div>
+    </footer>
+
+    <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+
+      // Get job ID from URL path
+      const pathParts = window.location.pathname.split('/');
+      const jobId = pathParts[pathParts.indexOf('apply') + 1];
+
+      // State
+      let jobData = null;
+
+      // DOM Elements
+      const loadingState = document.getElementById('loading-state');
+      const errorState = document.getElementById('error-state');
+      const successState = document.getElementById('success-state');
+      const formContainer = document.getElementById('form-container');
+      const applicationForm = document.getElementById('application-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const submitLoading = document.getElementById('submit-loading');
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('resume');
+      const uploadIcon = document.getElementById('upload-icon');
+      const uploadText = document.getElementById('upload-text');
+      const uploadSubtext = document.getElementById('upload-subtext');
+      const fileName = document.getElementById('file-name');
+
+      // Fetch job details
+      async function loadJob() {
+        try {
+          const response = await fetch(`/api/public/job/${jobId}`);
+          
+          if (!response.ok) {
+            throw new Error('Job not found');
+          }
+
+          jobData = await response.json();
+          renderJob();
+          
+          loadingState.classList.add('hidden');
+          formContainer.classList.remove('hidden');
+          
+        } catch (error) {
+          console.error('Error loading job:', error);
+          loadingState.classList.add('hidden');
+          errorState.classList.remove('hidden');
+        }
+      }
+
+      // Render job details
+      function renderJob() {
+        document.getElementById('job-title').textContent = jobData.title;
+        document.getElementById('job-experience').textContent = `${jobData.min_experience}+ years experience`;
+        document.getElementById('job-skills-count').textContent = `${jobData.required_skills.length} skills required`;
+        const descriptionElement = document.getElementById('job-description');
+        descriptionElement.style.whiteSpace = 'pre-line';
+        descriptionElement.textContent = jobData.description || '';
+        
+        // Render skills
+        const skillsContainer = document.getElementById('job-skills');
+        jobData.required_skills.forEach(skill => {
+          const badge = document.createElement('span');
+          badge.className = 'px-3 py-1 bg-slate-100 text-slate-700 text-sm rounded-full';
+          badge.textContent = skill;
+          skillsContainer.appendChild(badge);
+        });
+
+        // Render dynamic fields based on form_config
+        if (jobData.form_config) {
+          renderDynamicFields(jobData.form_config);
+        }
+      }
+
+      // Render dynamic form fields
+      function renderDynamicFields(config) {
+        const container = document.getElementById('dynamic-fields');
+
+        const escapeHtml = (value) => String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        
+        // LinkedIn
+        if (config.require_linkedin) {
+          container.innerHTML += `
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                LinkedIn Profile URL ${config.require_linkedin === 'required' ? '<span class="text-red-500">*</span>' : ''}
+              </label>
+              <input 
+                type="url" 
+                id="linkedin_url" 
+                name="linkedin_url" 
+                ${config.require_linkedin === 'required' ? 'required' : ''}
+                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                placeholder="https://linkedin.com/in/yourprofile"
+              />
+            </div>
+          `;
+        }
+
+        // Portfolio
+        if (config.require_portfolio) {
+          container.innerHTML += `
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-700 mb-2">
+                Portfolio / Website URL ${config.require_portfolio === 'required' ? '<span class="text-red-500">*</span>' : ''}
+              </label>
+              <input 
+                type="url" 
+                id="portfolio_url" 
+                name="portfolio_url" 
+                ${config.require_portfolio === 'required' ? 'required' : ''}
+                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                placeholder="https://yourportfolio.com"
+              />
+            </div>
+          `;
+        }
+
+        // Custom questions
+        if (config.custom_questions && config.custom_questions.length > 0) {
+          config.custom_questions.forEach((question, index) => {
+            container.innerHTML += `
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                  ${escapeHtml(question)}
+                </label>
+                <textarea 
+                  id="custom_${index}" 
+                  name="custom_${index}" 
+                  rows="3"
+                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                  placeholder="Your answer..."
+                ></textarea>
+              </div>
+            `;
+          });
+        }
+      }
+
+      // File upload handling
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFile(file);
+        }
+      });
+
+      // Drag and drop
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+          fileInput.files = e.dataTransfer.files;
+          handleFile(file);
+        } else {
+          alert('Please upload a PDF file');
+        }
+      });
+
+      function handleFile(file) {
+        if (file.size > 10 * 1024 * 1024) {
+          alert('File size must be less than 10MB');
+          return;
+        }
+        
+        dropZone.classList.add('file-selected');
+        fileName.textContent = `✓ ${file.name}`;
+        fileName.classList.remove('hidden');
+        uploadText.textContent = 'Resume selected';
+        uploadSubtext.classList.add('hidden');
+        
+        // Change icon
+        uploadIcon.setAttribute('data-lucide', 'file-check');
+        uploadIcon.classList.remove('text-slate-400');
+        uploadIcon.classList.add('text-emerald-500');
+        lucide.createIcons();
+      }
+
+      // Form submission
+      applicationForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Collect form data
+        const formData = new FormData();
+        formData.append('name', document.getElementById('name').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('phone', document.getElementById('phone').value || '');
+        formData.append('resume', fileInput.files[0]);
+        formData.append('website_url_catch', document.querySelector('[name="website_url_catch"]').value);
+
+        // Dynamic fields
+        const linkedinInput = document.getElementById('linkedin_url');
+        const portfolioInput = document.getElementById('portfolio_url');
+        if (linkedinInput) formData.append('linkedin_url', linkedinInput.value);
+        if (portfolioInput) formData.append('portfolio_url', portfolioInput.value);
+
+        // Custom answers
+        const customAnswers = {};
+        if (jobData.form_config && jobData.form_config.custom_questions) {
+          jobData.form_config.custom_questions.forEach((question, index) => {
+            const answer = document.getElementById(`custom_${index}`)?.value;
+            if (answer) {
+              customAnswers[question] = answer;
+            }
+          });
+        }
+        if (Object.keys(customAnswers).length > 0) {
+          formData.append('custom_answers_json', JSON.stringify(customAnswers));
+        }
+
+        // Show loading state
+        submitBtn.classList.add('hidden');
+        submitLoading.classList.remove('hidden');
+
+        try {
+          const response = await fetch(`/api/public/apply/${jobId}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Submission failed');
+          }
+
+          // Show success state
+          formContainer.classList.add('hidden');
+          successState.classList.remove('hidden');
+          lucide.createIcons();
+
+        } catch (error) {
+          console.error('Submission error:', error);
+          alert('Failed to submit application. Please try again.');
+          submitBtn.classList.remove('hidden');
+          submitLoading.classList.add('hidden');
+        }
+      });
+
+      // Load job on page load
+      loadJob();
+    </script>
+
+  </body>
+</html>

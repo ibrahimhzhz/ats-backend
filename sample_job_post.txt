@@ -1,0 +1,16 @@
+Job Title:
+AI Backend Engineer
+
+Job Description:
+We are looking for a backend engineer to architect scalable AI solutions. The ideal candidate has experience building REST APIs with Python (FastAPI or Django) and integrating Large Language Models using frameworks like Google Agentic Development Kit (ADK) or LangChain. You should be comfortable with multi-agent orchestration, prompt engineering, and optimizing SQL databases (PostgreSQL/MySQL).
+
+Minimum Experience Required:
+1 Year
+
+Required Technical Skills:
+Python
+FastAPI
+Google Agentic Development Kit (ADK)
+Vertex AI
+SQL
+Prompt Engineering

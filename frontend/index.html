@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LoqATS — Recruiter Dashboard</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
+            keyframes: {
+              "progress-stripes": {
+                from: { backgroundPosition: "1rem 0" },
+                to: { backgroundPosition: "0 0" },
+              },
+              "fade-in": { from: { opacity: 0, transform: "translateY(4px)" }, to: { opacity: 1, transform: "translateY(0)" } },
+            },
+            animation: {
+              "progress-stripes": "progress-stripes 1s linear infinite",
+              "fade-in": "fade-in 0.15s ease-out",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Auth layer (must come before any inline scripts that call Auth.*) -->
+    <script src="/static/js/auth.js"></script>
+
+    <style>
+      * { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+
+      .bg-slate-900 { background-color: #1e3a8a !important; }
+      .bg-slate-800 { background-color: #1e40af !important; }
+      .bg-slate-100 { background-color: #dbeafe !important; }
+      .bg-slate-50 { background-color: #eff6ff !important; }
+      .text-slate-900 { color: #0f172a !important; }
+      .text-slate-700 { color: #1e3a8a !important; }
+      .text-slate-600 { color: #1d4ed8 !important; }
+      .text-slate-500 { color: #475569 !important; }
+      .text-slate-400 { color: #64748b !important; }
+      .border-slate-300 { border-color: #93c5fd !important; }
+      .border-slate-200 { border-color: #bfdbfe !important; }
+      .border-slate-100 { border-color: #dbeafe !important; }
+      .hover\:bg-slate-700:hover { background-color: #1d4ed8 !important; }
+      .hover\:bg-slate-50:hover { background-color: #eff6ff !important; }
+
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: #f1f5f9; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+      .drag-active {
+        border-color: #3b82f6 !important;
+        background-color: #eff6ff !important;
+      }
+      .drag-active #dz-icon { color: #3b82f6 !important; }
+
+      .progress-animated {
+        background-image: linear-gradient(
+          45deg,
+          rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%,
+          rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%,
+          transparent 75%, transparent
+        );
+        background-size: 1rem 1rem;
+        animation: progress-stripes 1s linear infinite;
+      }
+
+      .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-clamp: 2; }
+      .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-clamp: 3; }
+
+      .candidate-row { transition: background-color 0.1s ease; }
+      .candidate-row:hover { background-color: #f8fafc; }
+      .job-row { cursor: pointer; transition: background-color 0.1s ease; }
+      .job-row:hover { background-color: #f8fafc; }
+
+      .view { animation: fade-in 0.18s ease-out; }
+
+      .stage-active { border-color: #1e293b !important; background-color: #f8fafc !important; }
+      .stage-active i { color: #0f172a !important; }
+    </style>
+  </head>
+  <body class="h-full bg-blue-50 text-slate-900 antialiased">
+
+    <!-- =========================================================
+         TOP NAVIGATION
+    ========================================================= -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div class="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
+        <!-- Logo + Breadcrumb -->
+        <div class="flex items-center gap-3">
+          <div class="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="zap" class="w-4 h-4 text-blue-200"></i>
+          </div>
+          <span class="font-semibold text-slate-900 tracking-tight text-sm">LoqATS</span>
+          <span class="text-slate-300 font-thin select-none">/</span>
+          <span class="text-slate-500 text-sm" id="nav-breadcrumb">Dashboard</span>
+        </div>
+        <!-- Right side: status pill + user email + logout -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-xs font-medium text-emerald-700">AI Engine Active</span>
+          </div>
+          <!-- User info + logout -->
+          <span id="nav-user-email" class="text-xs text-slate-400 hidden sm:block"></span>
+          <button
+            onclick="Auth.logout()"
+            class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all"
+          >
+            <i data-lucide="log-out" class="w-3 h-3"></i>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================================================
+         DASHBOARD VIEW
+    ========================================================= -->
+    <div id="view-dashboard" class="view max-w-screen-xl mx-auto w-full px-6 py-8">
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 class="text-2xl font-semibold text-slate-900">Recruiter Dashboard</h1>
+          <p class="text-slate-500 text-sm mt-1">AI-powered multi-stage candidate screening pipeline</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            onclick="refreshJobAnalytics().then(() => { renderSessionsTable(); lucide.createIcons(); })"
+            class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-sm font-medium px-3 py-2.5 rounded-lg transition-colors"
+            title="Refresh analytics"
+          >
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+          <button
+            onclick="openJobModal()"
+            class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Create Job Posting
+          </button>
+          <button
+            onclick="openModal()"
+            class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+          >
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            Bulk Screen
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="metrics-grid"></div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 class="font-semibold text-slate-900 text-sm">Screening Sessions</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Click any row to view the full candidate pipeline</p>
+          </div>
+          <span id="sessions-count-badge" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600"></span>
+        </div>
+        <div class="px-6 py-3 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="jobs-search-input"
+              type="text"
+              placeholder="Search jobs by title or ID"
+              oninput="setDashboardSearch(this.value)"
+              class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+            />
+          </div>
+          <select
+            id="jobs-filter-select"
+            onchange="setDashboardJobFilter(this.value)"
+            class="sm:w-52 px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+          >
+            <option value="all">All Jobs</option>
+            <option value="active">Active Jobs</option>
+            <option value="inactive">Inactive Jobs</option>
+            <option value="with-candidates">With Candidates</option>
+            <option value="without-candidates">No Candidates Yet</option>
+          </select>
+          <button
+            onclick="clearDashboardFilters()"
+            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            Clear
+          </button>
+        </div>
+        <div id="sessions-table-container"></div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         PIPELINE VIEW
+    ========================================================= -->
+    <div id="view-pipeline" class="view max-w-screen-xl mx-auto w-full px-6 py-8" style="display:none">
+
+      <div class="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
+        <button
+          onclick="showDashboard()"
+          class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg transition-all self-start mt-0.5"
+        >
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          Dashboard
+        </button>
+        <div class="flex-1">
+          <h1 class="text-2xl font-semibold text-slate-900" id="pipeline-title">Candidate Pipeline</h1>
+          <p class="text-slate-500 text-sm mt-1" id="pipeline-subtitle"></p>
+        </div>
+        <button
+          onclick="openModal()"
+          class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm self-start"
+        >
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          New Screen
+        </button>
+      </div>
+
+      <div id="pipeline-stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"></div>
+      <div id="pipeline-criteria" class="mb-5"></div>
+
+      <div class="mb-4 space-y-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            <button onclick="setPipelineFilter('all')"         data-filter="all"         class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 bg-white shadow-sm text-slate-900">All</button>
+            <button onclick="setPipelineFilter('shortlisted')" data-filter="shortlisted" class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Shortlisted</button>
+            <button onclick="setPipelineFilter('review')"      data-filter="review"      class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Needs Review</button>
+            <button onclick="setPipelineFilter('rejected')"    data-filter="rejected"    class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Rejected</button>
+          </div>
+          <span class="text-xs text-slate-400" id="candidate-count-label"></span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          <div class="relative sm:col-span-2">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="candidate-search-input"
+              type="text"
+              placeholder="Search candidate by name or email"
+              oninput="setCandidateSearch(this.value)"
+              class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+            />
+          </div>
+          <select
+            id="candidate-exp-filter"
+            onchange="setCandidateExperienceFilter(this.value)"
+            class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+          >
+            <option value="all">All Experience</option>
+            <option value="0-1">0-1 yrs</option>
+            <option value="2-4">2-4 yrs</option>
+            <option value="5-8">5-8 yrs</option>
+            <option value="9+">9+ yrs</option>
+          </select>
+          <select
+            id="candidate-score-filter"
+            onchange="setCandidateScoreFilter(this.value)"
+            class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+          >
+            <option value="all">All Scores</option>
+            <option value="80+">80-100</option>
+            <option value="60-79">60-79</option>
+            <option value="0-59">0-59</option>
+          </select>
+          <div class="flex gap-2">
+            <input
+              id="candidate-skill-input"
+              type="text"
+              placeholder="Skill"
+              oninput="setCandidateSkillFilter(this.value)"
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+            />
+            <button
+              onclick="clearCandidateFilters()"
+              class="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+        <div id="candidate-table-container"></div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         BULK SCREEN MODAL
+    ========================================================= -->
+    <div id="modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeModal()"></div>
+
+      <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] overflow-y-auto" onclick="event.stopPropagation()">
+
+        <!-- Modal header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10 rounded-t-2xl">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="scan-search" class="w-4 h-4 text-amber-400"></i>
+            </div>
+            <div>
+              <h2 class="font-semibold text-slate-900 text-sm">Bulk Resume Screening</h2>
+              <p class="text-xs text-slate-400">Upload a ZIP of PDF resumes for AI-powered evaluation</p>
+            </div>
+          </div>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Processing state -->
+        <div id="modal-processing" class="px-6 py-10 flex-col items-center gap-5" style="display:none">
+          <div class="w-16 h-16 rounded-2xl bg-slate-900 flex items-center justify-center mb-1 mx-auto">
+            <i data-lucide="cpu" class="w-8 h-8 text-amber-400 animate-pulse"></i>
+          </div>
+          <div class="text-center mx-auto">
+            <p class="font-semibold text-slate-900 text-base" id="modal-loading-title">Analyzing Resumes...</p>
+            <p class="text-slate-500 text-sm mt-1" id="modal-loading-subtitle">AI multi-stage pipeline initializing</p>
+          </div>
+          <div class="w-full max-w-sm mx-auto">
+            <div class="flex justify-between text-xs text-slate-500 mb-2">
+              <span id="progress-label">Uploading...</span>
+              <span id="progress-percent" class="font-mono font-semibold text-slate-700">0%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div id="progress-bar" class="h-full bg-slate-800 rounded-full progress-animated transition-all duration-700" style="width:2%"></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 w-full max-w-sm mx-auto">
+            <div id="stage-1" class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50 transition-all duration-300">
+              <i data-lucide="filter" class="w-4 h-4 text-slate-400"></i>
+              <span class="text-xs font-medium text-slate-500 text-center">Rule Filter</span>
+            </div>
+            <div id="stage-2" class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50 transition-all duration-300">
+              <i data-lucide="brain" class="w-4 h-4 text-slate-400"></i>
+              <span class="text-xs font-medium text-slate-500 text-center">AI Eval</span>
+            </div>
+            <div id="stage-3" class="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50 transition-all duration-300">
+              <i data-lucide="trophy" class="w-4 h-4 text-slate-400"></i>
+              <span class="text-xs font-medium text-slate-500 text-center">Ranking</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form state -->
+        <div id="modal-form-body" class="px-6 py-5 space-y-5">
+
+          <!-- Quick Paste Toggle -->
+          <div>
+            <button
+              type="button"
+              onclick="toggleQuickPaste()"
+              class="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors group"
+            >
+              <i data-lucide="wand-2" class="w-4 h-4"></i>
+              Quick Paste Mode
+              <span class="text-slate-400 text-xs font-normal">— auto-fill from a formatted job posting</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-auto transition-transform" id="qp-chevron"></i>
+            </button>
+            <div id="quick-paste-panel" class="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-100" style="display:none">
+              <p class="text-xs text-blue-600 mb-2 font-medium">
+                Paste a structured job post below, then click Parse to auto-fill all form fields.
+              </p>
+              <textarea
+                id="quickPaste"
+                rows="8"
+                placeholder="Job Title: Senior Backend Engineer&#10;&#10;Job Description:&#10;We are looking for an experienced engineer to...&#10;&#10;Minimum Experience Required:&#10;3 Years&#10;&#10;Required Technical Skills:&#10;Python&#10;FastAPI&#10;PostgreSQL"
+                class="w-full text-xs p-3 border border-blue-200 rounded-lg bg-white font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder-blue-300"
+              ></textarea>
+              <button
+                type="button"
+                onclick="parsePaste()"
+                class="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors"
+              >
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                Parse &amp; Auto-Fill
+              </button>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-100"></div>
+
+          <!-- Upload Form -->
+          <form id="uploadForm" class="space-y-4">
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="jobTitle">Job Title</label>
+              <input type="text" id="jobTitle" placeholder="e.g., Senior Backend Engineer"
+                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="jobDescription">
+                Job Description <span class="text-red-400 font-normal">*</span>
+              </label>
+              <textarea id="jobDescription" name="job_description" rows="5" required
+                placeholder="Enter the full job description, key responsibilities, and must-have qualifications..."
+                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition resize-none bg-white"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="minExperience">
+                  Min. Experience (Years) <span class="text-red-400 font-normal">*</span>
+                </label>
+                <input type="number" id="minExperience" name="min_experience" step="0.5" min="0" max="30" value="3.0" required
+                  class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition bg-white" />
+                <p class="text-xs text-slate-400 mt-1.5">A 0.5-year buffer is applied automatically.</p>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="requiredSkills">
+                  Required Skills <span class="text-red-400 font-normal">*</span>
+                </label>
+                <input type="text" id="requiredSkills" name="required_skills" placeholder="Python, FastAPI, PostgreSQL" required
+                  class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
+                <p class="text-xs text-slate-400 mt-1.5">Candidates need at least 50% skill match.</p>
+              </div>
+            </div>
+
+            <!-- ZIP Dropzone -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Resume ZIP File <span class="text-red-400 font-normal">*</span>
+              </label>
+              <div id="dropzone"
+                class="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-slate-400 hover:bg-slate-50/60 transition-all duration-200"
+                onclick="document.getElementById('zipFile').click()"
+                ondragover="handleDragOver(event)"
+                ondragleave="handleDragLeave(event)"
+                ondrop="handleDrop(event)"
+              >
+                <div class="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center">
+                  <i data-lucide="archive" id="dz-icon" class="w-5 h-5 text-slate-400 transition-colors"></i>
+                </div>
+                <div class="text-center">
+                  <p class="text-sm font-medium text-slate-700" id="dropzone-title">Drop your ZIP file here</p>
+                  <p class="text-xs text-slate-400 mt-0.5" id="dropzone-subtitle">or click to browse &mdash; .zip only</p>
+                </div>
+                <input type="file" id="zipFile" name="resumes_zip" accept=".zip" required class="hidden" onchange="handleFileSelect(event)" />
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex justify-end items-center gap-3 pt-2 border-t border-slate-100">
+              <button type="button" onclick="closeModal()"
+                class="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 rounded-lg transition-all">
+                Cancel
+              </button>
+              <button type="submit" id="submitBtn"
+                class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                Start Multi-Stage Screening
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         CREATE JOB POSTING MODAL
+    ========================================================= -->
+    <div id="job-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeJobModal()"></div>
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 z-10">
+          <div class="flex items-start justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900">Create Job Posting</h2>
+              <p class="text-xs text-slate-500 mt-1">Create a job posting to share on your careers portal</p>
+            </div>
+            <button onclick="closeJobModal()" class="text-slate-400 hover:text-slate-600 transition">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form id="createJobForm" class="px-6 py-5 space-y-5">
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobTitle">
+              Job Title <span class="text-red-400 font-normal">*</span>
+            </label>
+            <input type="text" id="newJobTitle" required
+              placeholder="e.g., Senior Full-Stack Engineer"
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobDescription">
+              Job Description <span class="text-red-400 font-normal">*</span>
+            </label>
+            <textarea id="newJobDescription" rows="6" required
+              placeholder="Enter the full job description, responsibilities, and qualifications..."
+              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition resize-none bg-white"></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobExperience">
+                Min. Experience (Years) <span class="text-red-400 font-normal">*</span>
+              </label>
+              <input type="number" id="newJobExperience" step="0.5" min="0" max="30" value="3.0" required
+                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition bg-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobSkills">
+                Required Skills <span class="text-red-400 font-normal">*</span>
+              </label>
+              <input type="text" id="newJobSkills" required
+                placeholder="Python, FastAPI, PostgreSQL"
+                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
+            </div>
+          </div>
+
+          <!-- Optional: Form Configuration -->
+          <div class="border-t border-slate-200 pt-5 mt-5">
+            <h3 class="text-xs font-semibold text-slate-700 mb-3">Application Form Settings (Optional)</h3>
+            
+            <div class="space-y-3">
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="requireLinkedIn" class="rounded border-slate-300 text-slate-900 focus:ring-slate-400">
+                <span class="text-sm text-slate-700">Require LinkedIn Profile</span>
+              </label>
+              
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="requirePortfolio" class="rounded border-slate-300 text-slate-900 focus:ring-slate-400">
+                <span class="text-sm text-slate-700">Require Portfolio URL</span>
+              </label>
+              
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="customQuestions">
+                  Custom Questions (one per line)
+                </label>
+                <textarea id="customQuestions" rows="3"
+                  placeholder="Why do you want to work here?&#10;What's your biggest achievement?"
+                  class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition resize-none bg-white"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="flex justify-end items-center gap-3 pt-2 border-t border-slate-100">
+            <button type="button" onclick="closeJobModal()"
+              class="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 rounded-lg transition-all">
+              Cancel
+            </button>
+            <button type="submit" id="createJobBtn"
+              class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              Create Job Posting
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+    <!-- =========================================================
+         JAVASCRIPT
+    ========================================================= -->
+    <script>
+      // One-time migration: purge the old shared "ats_jobs" key that had
+      // no tenant scoping, so old cross-company data never surfaces again.
+      localStorage.removeItem("ats_jobs");
+
+      // ==========================================
+      // STATE
+      // ==========================================
+      let pollInterval = null;
+      let currentFilter = "all";
+      let selectedJob = null;
+      let dashboardSearchQuery = "";
+      let dashboardJobFilter = "all";
+      let candidateSearchQuery = "";
+      let candidateExperienceFilter = "all";
+      let candidateScoreFilter = "all";
+      let candidateSkillFilter = "";
+
+      // ==========================================
+      // LOCAL STORAGE — JOB PERSISTENCE
+      // Keyed by company_id so tenants never share session data
+      // ==========================================
+      function _jobStorageKey() {
+        const user = Auth.getUser();
+        if (!user?.company_id) return null;
+        return `ats_jobs_c${user.company_id}`;
+      }
+
+      function saveJob(job) {
+        const key = _jobStorageKey();
+        if (!key) return; // not authenticated — do nothing
+        const jobs = getStoredJobs();
+        jobs.unshift(job);
+        localStorage.setItem(key, JSON.stringify(jobs.slice(0, 100)));
+      }
+
+      function getStoredJobs() {
+        const key = _jobStorageKey();
+        if (!key) return []; // not authenticated — show nothing
+        try { return JSON.parse(localStorage.getItem(key) || "[]"); }
+        catch { return []; }
+      }
+
+      // Fetch live analytics from the API and merge with localStorage
+      async function refreshJobAnalytics() {
+        try {
+          const response = await Auth.authFetch("/jobs/");
+          if (!response.ok) return;
+          
+          const liveJobs = await response.json();
+          const storedJobs = getStoredJobs();
+
+          // Update existing stored jobs with live values
+          storedJobs.forEach((storedJob) => {
+            const liveJob = liveJobs.find((j) => j.id === storedJob.db_job_id || j.id === storedJob.id);
+            if (liveJob) {
+              storedJob.views = liveJob.views || 0;
+              storedJob.application_count = liveJob.application_count || 0;
+              storedJob.is_active = liveJob.is_active;
+              storedJob.title = liveJob.title || storedJob.title;
+
+              if (!storedJob.results) storedJob.results = {};
+              if (!storedJob.results.criteria) {
+                storedJob.results.criteria = {
+                  min_experience: liveJob.min_experience,
+                  required_skills: liveJob.required_skills || [],
+                };
+              }
+            }
+          });
+
+          // Add jobs that exist in backend but are missing locally
+          liveJobs.forEach((liveJob) => {
+            const exists = storedJobs.some((storedJob) => liveJob.id === storedJob.db_job_id || liveJob.id === storedJob.id);
+            if (!exists) {
+              storedJobs.push({
+                job_id: `job-${liveJob.id}`,
+                db_job_id: liveJob.id,
+                id: liveJob.id,
+                title: liveJob.title,
+                created_at: liveJob.created_at || new Date().toISOString(),
+                is_active: liveJob.is_active,
+                total_processed: 0,
+                shortlisted_count: 0,
+                review_count: 0,
+                rejected_count: 0,
+                views: liveJob.views || 0,
+                application_count: liveJob.application_count || 0,
+                results: {
+                  total_processed: 0,
+                  shortlisted_count: 0,
+                  review_count: 0,
+                  rejected_count: 0,
+                  all_candidates: [],
+                  criteria: {
+                    min_experience: liveJob.min_experience,
+                    required_skills: liveJob.required_skills || [],
+                  },
+                },
+              });
+            }
+          });
+
+          storedJobs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+          
+          // Save updated data
+          const key = _jobStorageKey();
+          if (key) {
+            localStorage.setItem(key, JSON.stringify(storedJobs));
+          }
+        } catch (error) {
+          console.error("Failed to refresh analytics:", error);
+        }
+      }
+
+      // ==========================================
+      // VIEW MANAGEMENT
+      // ==========================================
+      function showDashboard() {
+        selectedJob = null;
+        document.getElementById("view-dashboard").style.display = "";
+        document.getElementById("view-pipeline").style.display = "none";
+        document.getElementById("nav-breadcrumb").textContent = "Dashboard";
+        
+        // Refresh analytics from API before rendering
+        refreshJobAnalytics().then(() => {
+          renderMetrics();
+          renderSessionsTable();
+          lucide.createIcons();
+        });
+      }
+
+      function showPipeline(jobIndex) {
+        const jobs = getStoredJobs();
+        const job = jobs[jobIndex];
+        if (!job) return;
+        selectedJob = job;
+
+        document.getElementById("view-dashboard").style.display = "none";
+        document.getElementById("view-pipeline").style.display = "";
+        document.getElementById("nav-breadcrumb").textContent = job.title || "Pipeline";
+        document.getElementById("pipeline-title").textContent = job.title || "Candidate Pipeline";
+        
+        // Show different subtitle based on job source
+        const processedCount = job.total_processed || job.application_count || 0;
+        const subtitle = processedCount > 0 
+          ? `Screening session · ${formatDate(job.created_at)} · ${processedCount} applicants`
+          : `Job posting · ${formatDate(job.created_at)} · accepting applications`;
+        document.getElementById("pipeline-subtitle").textContent = subtitle;
+
+        currentFilter = "all";
+        candidateSearchQuery = "";
+        candidateExperienceFilter = "all";
+        candidateScoreFilter = "all";
+        candidateSkillFilter = "";
+        const candidateSearchInput = document.getElementById("candidate-search-input");
+        const candidateExpSelect = document.getElementById("candidate-exp-filter");
+        const candidateScoreSelect = document.getElementById("candidate-score-filter");
+        const candidateSkillInput = document.getElementById("candidate-skill-input");
+        if (candidateSearchInput) candidateSearchInput.value = "";
+        if (candidateExpSelect) candidateExpSelect.value = "all";
+        if (candidateScoreSelect) candidateScoreSelect.value = "all";
+        if (candidateSkillInput) candidateSkillInput.value = "";
+        updateFilterTabs();
+        renderPipelineStats(job);
+        renderCriteriaBanner(job);
+        
+        // Fetch live candidates from API
+        fetchAndRenderCandidates(job);
+        lucide.createIcons();
+      }
+
+      function getJobKey(job) {
+        return String(job.db_job_id ?? job.id ?? job.job_id ?? "");
+      }
+
+      function showPipelineByKey(jobKey) {
+        const jobs = getStoredJobs();
+        const idx = jobs.findIndex((job) => getJobKey(job) === String(jobKey));
+        if (idx >= 0) showPipeline(idx);
+      }
+
+      function setDashboardSearch(value) {
+        dashboardSearchQuery = (value || "").trim().toLowerCase();
+        renderSessionsTable();
+        lucide.createIcons();
+      }
+
+      function setDashboardJobFilter(value) {
+        dashboardJobFilter = value || "all";
+        renderSessionsTable();
+      }
+
+      function clearDashboardFilters() {
+        dashboardSearchQuery = "";
+        dashboardJobFilter = "all";
+        const searchInput = document.getElementById("jobs-search-input");
+        const filterSelect = document.getElementById("jobs-filter-select");
+        if (searchInput) searchInput.value = "";
+        if (filterSelect) filterSelect.value = "all";
+        renderSessionsTable();
+        lucide.createIcons();
+      }
+
+      function applyDashboardFilters(jobs) {
+        return jobs.filter((job) => {
+          const title = (job.title || "").toLowerCase();
+          const key = getJobKey(job).toLowerCase();
+          const processed = Number(job.total_processed || job.application_count || 0);
+          const isActive = job.is_active !== false;
+
+          const matchesSearch = !dashboardSearchQuery || title.includes(dashboardSearchQuery) || key.includes(dashboardSearchQuery);
+
+          let matchesType = true;
+          if (dashboardJobFilter === "active") matchesType = isActive;
+          else if (dashboardJobFilter === "inactive") matchesType = !isActive;
+          else if (dashboardJobFilter === "with-candidates") matchesType = processed > 0;
+          else if (dashboardJobFilter === "without-candidates") matchesType = processed === 0;
+
+          return matchesSearch && matchesType;
+        });
+      }
+
+      // Fetch candidates from API and render
+      async function fetchAndRenderCandidates(job) {
+        const jobId = job.db_job_id || job.id;
+        if (!jobId) {
+          renderCandidateTable(job);
+          return;
+        }
+
+        try {
+          // Fetch applicants from API
+          const response = await Auth.authFetch(`/applicants/?job_id=${jobId}`);
+          if (response.ok) {
+            const apiCandidates = await response.json();
+            
+            // Merge with localStorage candidates if they exist
+            const localCandidates = job.results?.all_candidates || [];
+            
+            // Combine and deduplicate by email
+            const candidateMap = new Map();
+            localCandidates.forEach(c => candidateMap.set(c.email, c));
+            apiCandidates.forEach(c => candidateMap.set(c.email, c));
+            
+            const allCandidates = Array.from(candidateMap.values());
+            
+            // Update job with combined candidates
+            if (!job.results) job.results = {};
+            job.results.all_candidates = allCandidates;
+            
+            // Calculate stats from candidates
+            const shortlisted = allCandidates.filter(c => c.match_score >= 80 || c.status === 'shortlisted').length;
+            const review = allCandidates.filter(c => (c.match_score >= 60 && c.match_score < 80) || c.status === 'review').length;
+            const rejected = allCandidates.filter(c => c.match_score < 60 || c.status === 'rejected').length;
+            
+            job.results.total_processed = allCandidates.length;
+            job.results.shortlisted_count = shortlisted;
+            job.results.review_count = review;
+            job.results.rejected_count = rejected;
+            
+            // Update stats display
+            selectedJob = job;
+            renderPipelineStats(job);
+            renderCandidateTable(job);
+          } else {
+            renderCandidateTable(job);
+          }
+        } catch (error) {
+          console.error("Failed to fetch candidates:", error);
+          renderCandidateTable(job);
+        }
+      }
+
+      // ==========================================
+      // METRICS CARDS
+      // ==========================================
+      function renderMetrics() {
+        const jobs = getStoredJobs();
+        const totalSessions    = jobs.length;
+        const totalScreened    = jobs.reduce((s, j) => s + (j.total_processed || 0), 0);
+        const totalShortlisted = jobs.reduce((s, j) => s + (j.shortlisted_count || 0), 0);
+        const totalSaved       = jobs.reduce((s, j) => s + (j.knocked_out || 0), 0) * 2;
+        const shortlistRate    = totalScreened > 0 ? Math.round((totalShortlisted / totalScreened) * 100) : 0;
+
+        const cards = [
+          { label: "Screening Sessions",   value: totalSessions.toLocaleString(),    sub: "All time",                         icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
+          { label: "Candidates Screened",  value: totalScreened.toLocaleString(),    sub: "Total resumes processed",          icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
+          { label: "Shortlisted",          value: totalShortlisted.toLocaleString(), sub: `${shortlistRate}% shortlist rate`, icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
+          { label: "API Calls Saved",      value: totalSaved.toLocaleString(),       sub: "Via knockout pre-filter",          icon: "trending-down",iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
+        ];
+
+        document.getElementById("metrics-grid").innerHTML = cards.map(c => `
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-5 hover:shadow-md transition-shadow duration-200">
+            <div class="flex items-start justify-between mb-4">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">${c.label}</p>
+              <div class="w-8 h-8 rounded-lg ${c.iconBg} flex items-center justify-center flex-shrink-0 ml-2">
+                <i data-lucide="${c.icon}" class="w-4 h-4 ${c.iconColor}"></i>
+              </div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 tracking-tight">${c.value}</div>
+            <p class="text-xs text-slate-400 mt-1.5">${c.sub}</p>
+          </div>`).join("");
+      }
+
+      // ==========================================
+      // SESSIONS TABLE
+      // ==========================================
+      function renderSessionsTable() {
+        const jobs = getStoredJobs();
+        const filteredJobs = applyDashboardFilters(jobs);
+        const container = document.getElementById("sessions-table-container");
+        const badge     = document.getElementById("sessions-count-badge");
+        badge.textContent = filteredJobs.length === jobs.length
+          ? `${jobs.length} session${jobs.length !== 1 ? "s" : ""}`
+          : `${filteredJobs.length} of ${jobs.length} sessions`;
+
+        if (jobs.length === 0) {
+          container.innerHTML = `
+            <div class="py-16 flex flex-col items-center gap-4 text-center">
+              <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <i data-lucide="inbox" class="w-7 h-7 text-slate-400"></i>
+              </div>
+              <div>
+                <p class="font-semibold text-slate-700 text-sm">No jobs yet</p>
+                <p class="text-slate-400 text-xs mt-1 max-w-xs mx-auto">
+                  Create a job posting for your careers portal or bulk screen resumes to get started.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openJobModal()"
+                  class="inline-flex items-center gap-2 text-sm font-medium bg-slate-900 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  Create Job Posting
+                </button>
+                <button onclick="openModal()"
+                  class="inline-flex items-center gap-2 text-sm font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg transition-colors">
+                  <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                  Bulk Screen
+                </button>
+              </div>
+            </div>`;
+          return;
+        }
+
+        if (filteredJobs.length === 0) {
+          container.innerHTML = `
+            <div class="py-12 flex flex-col items-center gap-3 text-center">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              <p class="text-slate-500 text-sm">No job postings match these filters</p>
+              <button onclick="clearDashboardFilters()"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                Clear Filters
+              </button>
+            </div>`;
+          lucide.createIcons();
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px]">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/80">
+                  <th class="text-left text-xs font-semibold text-slate-500 px-6 py-3 uppercase tracking-wide">Job Title</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Date</th>
+                  <th class="text-center text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Portal Analytics</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Processed</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Shortlisted</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Review</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Rejected</th>
+                  <th class="px-6 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredJobs.map((job) => `
+                  <tr class="job-row border-b border-slate-50 last:border-0" onclick='showPipelineByKey(${JSON.stringify(getJobKey(job))})'>
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                        </div>
+                        <div>
+                          <div class="font-semibold text-slate-900 text-sm">${escapeHtml(job.title || "Untitled Position")}</div>
+                          <div class="text-xs text-slate-400 mt-0.5 font-mono">${job.job_id ? job.job_id.substring(0, 12) + "…" : "—"}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-4 text-slate-500 text-sm whitespace-nowrap">${formatDate(job.created_at)}</td>
+                    <td class="px-4 py-4" onclick="event.stopPropagation()">
+                      <div class="flex flex-col items-center gap-1">
+                        <div class="text-xs text-slate-500">
+                          <span class="font-semibold text-slate-700">${job.views || 0}</span> views · 
+                          <span class="font-semibold text-slate-700">${job.application_count || 0}</span> applied
+                          ${job.views > 0 ? `<span class="text-slate-400">· ${Math.round(((job.application_count || 0) / job.views) * 100)}% conv.</span>` : ''}
+                        </div>
+                        <button 
+                          onclick="copyApplicationLink(${job.db_job_id || job.id}, event)" 
+                          class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline transition"
+                          title="Copy public application link"
+                        >
+                          <i data-lucide="link" class="w-3 h-3"></i>
+                          Copy Link
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-4 py-4 text-right font-semibold text-slate-700 text-sm">${job.total_processed || 0}</td>
+                    <td class="px-4 py-4 text-right">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">${job.shortlisted_count || 0}</span>
+                    </td>
+                    <td class="px-4 py-4 text-right">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">${job.review_count || 0}</span>
+                    </td>
+                    <td class="px-4 py-4 text-right">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20">${job.rejected_count || 0}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <button class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all">
+                        View Pipeline
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      // ==========================================
+      // PIPELINE STATS + CRITERIA BANNER
+      // ==========================================
+      function renderPipelineStats(job) {
+        const d = job.results || {};
+        const stats = [
+          { label: "Total Processed",    value: d.total_processed || 0,          accent: "text-slate-800",   ring: "border-slate-200",  bg: "bg-white" },
+          { label: "Duplicates Skipped", value: d.duplicates_skipped || 0,  accent: "text-sky-700",     ring: "border-sky-200",    bg: "bg-sky-50" },
+          { label: "Rule Knockout",      value: d.knocked_out || 0,         accent: "text-amber-700",   ring: "border-amber-200",  bg: "bg-amber-50" },
+          { label: "Scored",             value: d.scored || 0,              accent: "text-blue-700",    ring: "border-blue-200",   bg: "bg-blue-50" },
+          { label: "Shortlisted",        value: d.shortlisted_count || 0,        accent: "text-emerald-700", ring: "border-emerald-200",bg: "bg-emerald-50" },
+        ];
+        document.getElementById("pipeline-stats").innerHTML = stats.map(s => `
+          <div class="${s.bg} rounded-xl border ${s.ring} px-4 py-4">
+            <div class="text-2xl font-bold ${s.accent} tracking-tight">${s.value}</div>
+            <div class="text-xs font-medium text-slate-500 mt-1">${s.label}</div>
+          </div>`).join("");
+      }
+
+      function renderCriteriaBanner(job) {
+        const d = job.results || {};
+        const el = document.getElementById("pipeline-criteria");
+        if (!d.criteria) { el.innerHTML = ""; return; }
+        const skillTags = (d.criteria.required_skills || [])
+          .map(s => `<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-slate-200 text-slate-700">${escapeHtml(s)}</span>`)
+          .join("");
+        el.innerHTML = `
+          <div class="bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Screening Criteria</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-400">Min. Experience</span>
+              <span class="text-xs font-semibold text-slate-800">${d.criteria.min_experience} yrs</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs text-slate-400">Required Skills</span>
+              <div class="flex flex-wrap gap-1">${skillTags}</div>
+            </div>
+            ${job.knocked_out > 0
+              ? `<div class="ml-auto flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
+                  <i data-lucide="piggy-bank" class="w-3.5 h-3.5 text-emerald-500"></i>
+                  <span class="text-xs font-medium text-emerald-700">${job.knocked_out * 2} LLM calls saved (${Math.round((job.knocked_out / (job.total_processed || 1)) * 100)}% cost reduction)</span>
+                </div>` : ""}
+          </div>`;
+      }
+
+      // ==========================================
+      // CANDIDATE TABLE
+      // ==========================================
+      function setPipelineFilter(filter) {
+        currentFilter = filter;
+        updateFilterTabs();
+        if (selectedJob) renderCandidateTable(selectedJob);
+        lucide.createIcons();
+      }
+
+      function setCandidateSearch(value) {
+        candidateSearchQuery = (value || "").trim().toLowerCase();
+        if (selectedJob) renderCandidateTable(selectedJob);
+      }
+
+      function setCandidateExperienceFilter(value) {
+        candidateExperienceFilter = value || "all";
+        if (selectedJob) renderCandidateTable(selectedJob);
+      }
+
+      function setCandidateScoreFilter(value) {
+        candidateScoreFilter = value || "all";
+        if (selectedJob) renderCandidateTable(selectedJob);
+      }
+
+      function setCandidateSkillFilter(value) {
+        candidateSkillFilter = (value || "").trim().toLowerCase();
+        if (selectedJob) renderCandidateTable(selectedJob);
+      }
+
+      function clearCandidateFilters() {
+        candidateSearchQuery = "";
+        candidateExperienceFilter = "all";
+        candidateScoreFilter = "all";
+        candidateSkillFilter = "";
+
+        const searchInput = document.getElementById("candidate-search-input");
+        const expSelect = document.getElementById("candidate-exp-filter");
+        const scoreSelect = document.getElementById("candidate-score-filter");
+        const skillInput = document.getElementById("candidate-skill-input");
+        if (searchInput) searchInput.value = "";
+        if (expSelect) expSelect.value = "all";
+        if (scoreSelect) scoreSelect.value = "all";
+        if (skillInput) skillInput.value = "";
+
+        if (selectedJob) renderCandidateTable(selectedJob);
+      }
+
+      function getCandidateStatus(candidate) {
+        const explicit = (candidate.status || "").toLowerCase();
+        if (["shortlisted", "review", "rejected"].includes(explicit)) return explicit;
+        const score = Number(candidate.match_score || 0);
+        if (score >= 80) return "shortlisted";
+        if (score >= 60) return "review";
+        return "rejected";
+      }
+
+      function candidateMatchesExperience(candidate, filterValue) {
+        const years = Number(candidate.years_experience ?? 0);
+        if (filterValue === "0-1") return years >= 0 && years <= 1;
+        if (filterValue === "2-4") return years >= 2 && years <= 4;
+        if (filterValue === "5-8") return years >= 5 && years <= 8;
+        if (filterValue === "9+") return years >= 9;
+        return true;
+      }
+
+      function candidateMatchesScore(candidate, filterValue) {
+        const score = Number(candidate.match_score || 0);
+        if (filterValue === "80+") return score >= 80;
+        if (filterValue === "60-79") return score >= 60 && score <= 79;
+        if (filterValue === "0-59") return score <= 59;
+        return true;
+      }
+
+      function getCandidateSkillList(candidate) {
+        const rawSkills = candidate.skills;
+        if (Array.isArray(rawSkills)) return rawSkills.map(String);
+        if (rawSkills && typeof rawSkills === "object") return Object.keys(rawSkills);
+        return [];
+      }
+
+      function updateFilterTabs() {
+        document.querySelectorAll(".filter-tab").forEach(btn => {
+          const active = btn.dataset.filter === currentFilter;
+          btn.className = active
+            ? "filter-tab bg-white shadow-sm text-slate-900 px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-150"
+            : "filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700";
+        });
+      }
+
+      function renderCandidateTable(job) {
+        const d = job.results || {};
+        let candidates = [...(d.all_candidates || [])];
+        
+        // Status tab filter
+        if (currentFilter !== "all") {
+          candidates = candidates.filter((candidate) => getCandidateStatus(candidate) === currentFilter);
+        }
+
+        // Candidate search filter (name/email)
+        if (candidateSearchQuery) {
+          candidates = candidates.filter((candidate) => {
+            const name = (candidate.name || "").toLowerCase();
+            const email = (candidate.email || "").toLowerCase();
+            return name.includes(candidateSearchQuery) || email.includes(candidateSearchQuery);
+          });
+        }
+
+        // Experience range filter
+        if (candidateExperienceFilter !== "all") {
+          candidates = candidates.filter((candidate) => candidateMatchesExperience(candidate, candidateExperienceFilter));
+        }
+
+        // Score range filter
+        if (candidateScoreFilter !== "all") {
+          candidates = candidates.filter((candidate) => candidateMatchesScore(candidate, candidateScoreFilter));
+        }
+
+        // Skill keyword filter
+        if (candidateSkillFilter) {
+          candidates = candidates.filter((candidate) => {
+            const skillList = getCandidateSkillList(candidate).map((skill) => skill.toLowerCase());
+            return skillList.some((skill) => skill.includes(candidateSkillFilter));
+          });
+        }
+
+        const container  = document.getElementById("candidate-table-container");
+        const countLabel = document.getElementById("candidate-count-label");
+        countLabel.textContent = `${candidates.length} candidate${candidates.length !== 1 ? "s" : ""}`;
+
+        if (candidates.length === 0) {
+          container.innerHTML = `
+            <div class="py-12 flex flex-col items-center gap-3">
+              <i data-lucide="users" class="w-8 h-8 text-slate-200"></i>
+              <p class="text-slate-400 text-sm">No candidates in this category</p>
+            </div>`;
+          lucide.createIcons();
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px]">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/80">
+                  <th class="text-left text-xs font-semibold text-slate-500 px-6 py-3 uppercase tracking-wide">Candidate</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Exp.</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Status</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide min-w-[160px]">Match Score</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Score Breakdown</th>
+                  <th class="text-left text-xs font-semibold text-slate-500 px-6 py-3 uppercase tracking-wide">AI Summary</th>
+                  <th class="text-center text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody>${candidates.map(c => renderCandidateRow(c)).join("")}</tbody>
+            </table>
+          </div>`;
+        
+        // Render icons for the download buttons
+        lucide.createIcons();
+      }
+
+      function renderCandidateRow(c) {
+        const score = c.match_score || 0;
+        const normalizedStatus = getCandidateStatus(c);
+        const isShortlisted = normalizedStatus === "shortlisted";
+        const isReview = normalizedStatus === "review";
+
+        let statusBadge;
+        if (isShortlisted) {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>Shortlisted</span>`;
+        } else if (isReview) {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>Review</span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Rejected</span>`;
+        }
+
+        const barColor   = isShortlisted ? "bg-emerald-500" : isReview ? "bg-amber-400" : "bg-red-400";
+        const scoreColor = isShortlisted ? "text-emerald-700" : isReview ? "text-amber-600" : "text-red-600";
+
+        // Skills: new pipeline stores dict {skill: years}, old stored array
+        const skillsArr = getCandidateSkillList(c);
+        const skills    = skillsArr.slice(0, 4);
+        const skillTags = skills.map(s => `<span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">${escapeHtml(s)}</span>`).join("");
+        const moreSkills = skillsArr.length > 4 ? `<span class="text-xs text-slate-400">+${skillsArr.length - 4} more</span>` : "";
+
+        // Score breakdown from deterministic pipeline
+        const bd = c.breakdown;
+
+        function miniBar(label, val, max, colorClass) {
+          const pct = max > 0 ? Math.round((val / max) * 100) : 0;
+          return `<div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 w-9 flex-shrink-0">${label}</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-1.5 min-w-[50px]">
+              <div class="h-full rounded-full ${colorClass} transition-all duration-500" style="width:${pct}%"></div>
+            </div>
+            <span class="text-xs font-mono font-semibold text-slate-600 w-12 text-right flex-shrink-0">${val}/${max}</span>
+          </div>`;
+        }
+
+        const aiScoresHtml = bd
+          ? `<div class="flex flex-col gap-1.5 min-w-[160px]">
+              ${miniBar("Skill",  bd.skill_depth,  40, "bg-blue-500")}
+              ${miniBar("JD",     bd.jd_requirements || 0,  30, "bg-violet-500")}
+              ${miniBar("Exp",    bd.experience,   20, "bg-indigo-400")}
+              ${miniBar("Impact", bd.impact,       10, "bg-amber-400")}
+            </div>`
+          : `<span class="text-xs text-slate-300 italic">knocked out</span>`;
+
+        return `
+          <tr class="candidate-row border-b border-slate-50 last:border-0">
+            <td class="px-6 py-4 min-w-[200px]">
+              <div class="font-semibold text-slate-900 text-sm">${escapeHtml(c.name || "Unknown")}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${escapeHtml(c.email || "")}</div>
+              ${skills.length > 0 ? `<div class="flex flex-wrap items-center gap-1 mt-2">${skillTags}${moreSkills}</div>` : ""}
+            </td>
+            <td class="px-4 py-4 whitespace-nowrap">
+              <div class="text-sm font-bold text-slate-900">${c.years_experience ?? "—"}</div>
+              <div class="text-xs text-slate-400">yrs</div>
+            </td>
+            <td class="px-4 py-4 whitespace-nowrap">${statusBadge}</td>
+            <td class="px-4 py-4 min-w-[160px]">
+              <div class="flex items-center gap-3">
+                <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div class="h-full rounded-full ${barColor} transition-all duration-700" style="width:${Math.min(score, 100)}%"></div>
+                </div>
+                <span class="text-sm font-bold font-mono ${scoreColor} w-8 text-right flex-shrink-0">${score}</span>
+              </div>
+            </td>
+            <td class="px-4 py-4">${aiScoresHtml}</td>
+            <td class="px-6 py-4 max-w-xs"><p class="text-xs text-slate-500 leading-relaxed line-clamp-3">${escapeHtml(c.summary || "")}</p></td>
+            <td class="px-4 py-4 text-center">
+              <button 
+                onclick="downloadResume(${c.id})"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                title="Download Resume">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                Resume
+              </button>
+            </td>
+          </tr>`;
+      }
+
+      // ==========================================
+      // MODAL MANAGEMENT
+      // ==========================================
+      function openModal() {
+        document.getElementById("modal-overlay").style.display = "flex";
+        showModalForm();
+        lucide.createIcons();
+      }
+
+      function closeModal() {
+        document.getElementById("modal-overlay").style.display = "none";
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      }
+
+      function showModalForm() {
+        document.getElementById("modal-processing").style.display = "none";
+        document.getElementById("modal-form-body").style.display = "block";
+        const submitBtn = document.getElementById("submitBtn");
+        if (submitBtn) submitBtn.disabled = false;
+      }
+
+      function showModalProcessing() {
+        document.getElementById("modal-processing").style.display = "flex";
+        document.getElementById("modal-form-body").style.display = "none";
+      }
+
+      function openJobModal() {
+        document.getElementById("job-modal-overlay").style.display = "flex";
+        lucide.createIcons();
+      }
+
+      function closeJobModal() {
+        document.getElementById("job-modal-overlay").style.display = "none";
+        document.getElementById("createJobForm").reset();
+      }
+
+      // ==========================================
+      // RESUME DOWNLOAD
+      // ==========================================
+      async function downloadResume(applicantId) {
+        try {
+          const response = await Auth.authFetch(`/applicants/${applicantId}/download-resume`);
+          
+          if (!response.ok) {
+            if (response.status === 404) {
+              alert("Resume not available for download");
+            } else {
+              alert("Failed to download resume");
+            }
+            return;
+          }
+          
+          // Get filename from Content-Disposition header if available
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let filename = 'resume.pdf';
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename=(.+)/);
+            if (filenameMatch) {
+              filename = filenameMatch[1].replace(/['"]/g, '');
+            }
+          }
+          
+          // Download the file
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } catch (error) {
+          console.error("Download error:", error);
+          alert("Failed to download resume");
+        }
+      }
+
+      // ==========================================
+      // QUICK PASTE
+      // ==========================================
+      function toggleQuickPaste() {
+        const panel   = document.getElementById("quick-paste-panel");
+        const chevron = document.getElementById("qp-chevron");
+        const open    = panel.style.display === "none";
+        panel.style.display = open ? "block" : "none";
+        chevron.setAttribute("data-lucide", open ? "chevron-up" : "chevron-down");
+        lucide.createIcons();
+      }
+
+      function parsePaste() {
+        const text = document.getElementById("quickPaste").value.trim();
+        if (!text) { alert("Please paste a job posting first."); return; }
+        try {
+          const titleMatch = text.match(/Job Title:\s*(.+)/i);
+          const descMatch  = text.match(/Job Description:\s*\n([\s\S]*?)(?=\n\s*Minimum Experience|$)/i);
+          const expMatch   = text.match(/Minimum Experience Required:\s*\n?\s*(\d+(?:\.\d+)?)\s*(?:Year|yr)/i);
+          const skillsMatch= text.match(/Required (?:Technical )?Skills?:\s*\n([\s\S]*?)(?=\n\s*[A-Z][a-z]+:|$)/i);
+
+          if (titleMatch) document.getElementById("jobTitle").value = titleMatch[1].trim();
+          document.getElementById("jobDescription").value = descMatch ? descMatch[1].trim() : text;
+          document.getElementById("minExperience").value  = expMatch  ? parseFloat(expMatch[1]) : 3.0;
+
+          if (skillsMatch) {
+            const skills = skillsMatch[1].split(/\n/).map(s => s.trim()).filter(s => s && !s.match(/^[-•*]\s*$/)).map(s => s.replace(/^[-•*]\s*/, "")).filter(Boolean);
+            document.getElementById("requiredSkills").value = skills.join(", ");
+          }
+
+          document.getElementById("quickPaste").value = "";
+          document.getElementById("quick-paste-panel").style.display = "none";
+          document.getElementById("qp-chevron").setAttribute("data-lucide", "chevron-down");
+          lucide.createIcons();
+        } catch { alert("Error parsing. Please check the format and try again."); }
+      }
+
+      // ==========================================
+      // DRAG & DROP
+      // ==========================================
+      function handleDragOver(e) { e.preventDefault(); e.stopPropagation(); document.getElementById("dropzone").classList.add("drag-active"); }
+      function handleDragLeave(e) { e.stopPropagation(); document.getElementById("dropzone").classList.remove("drag-active"); }
+      function handleDrop(e) {
+        e.preventDefault(); e.stopPropagation();
+        document.getElementById("dropzone").classList.remove("drag-active");
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith(".zip")) { alert("Please upload a .zip file."); return; }
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById("zipFile").files = dt.files;
+        updateDropzoneUI(file.name, file.size);
+      }
+      function handleFileSelect(e) { const file = e.target.files[0]; if (file) updateDropzoneUI(file.name, file.size); }
+      function updateDropzoneUI(name, size) {
+        document.getElementById("dropzone-title").textContent    = name;
+        const sizeStr = size ? ` · ${(size / 1024 / 1024).toFixed(1)} MB` : "";
+        document.getElementById("dropzone-subtitle").textContent = `ZIP file selected${sizeStr} — click to change`;
+        const dz = document.getElementById("dropzone");
+        dz.classList.add("border-slate-400", "bg-slate-50");
+        dz.classList.remove("border-slate-200");
+      }
+
+      // ==========================================
+      // FORM SUBMISSION  — uses Auth.authFetch so
+      // the JWT Bearer token is sent automatically.
+      // ==========================================
+      document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        showModalProcessing();
+        updateProgress(0, 0, 2, "Uploading and validating ZIP file...");
+        activateStage(1);
+
+        const formData = new FormData();
+        formData.append("resumes_zip",     document.getElementById("zipFile").files[0]);
+        formData.append("job_description", document.getElementById("jobDescription").value);
+        formData.append("min_experience",  document.getElementById("minExperience").value);
+        formData.append("required_skills", document.getElementById("requiredSkills").value);
+
+        const jobTitle = document.getElementById("jobTitle").value.trim() || "Untitled Position";
+        formData.append("job_title", jobTitle);
+
+        try {
+          // Auth.authFetch automatically attaches Authorization: Bearer <token>
+          const response = await Auth.authFetch("/api/bulk-screen", { method: "POST", body: formData });
+          const data     = await response.json();
+
+          if (response.ok) {
+            updateProgress(0, data.total_resumes, 5, `Queued ${data.total_resumes} resumes for processing`);
+            startPolling(data.job_id, data.total_resumes, jobTitle, data.db_job_id);
+          } else {
+            alert("Error: " + (data.detail || data.error || "Something went wrong"));
+            showModalForm();
+          }
+        } catch (error) {
+          alert("Network error: " + error.message);
+          showModalForm();
+        }
+      });
+
+      // ==========================================
+      // POLLING  — uses Auth.authFetch
+      // ==========================================
+      function startPolling(jobId, totalResumes, jobTitle, dbJobId) {
+        activateStage(2);
+
+        pollInterval = setInterval(async () => {
+          try {
+            // Auth.authFetch attaches Bearer token and handles 401 automatically
+            const response = await Auth.authFetch(`/api/job/${jobId}`);
+            const job      = await response.json();
+
+            if (job.status === "processing") {
+              const processed = job.processed || 0;
+              const pct = totalResumes > 0 ? Math.round((processed / totalResumes) * 100) : 10;
+              updateProgress(processed, totalResumes, Math.max(pct, 10), `Processing ${processed} of ${totalResumes} resumes`);
+              if (pct > 60) activateStage(3);
+
+            } else if (job.status === "completed") {
+              clearInterval(pollInterval);
+              pollInterval = null;
+              activateStage(3);
+              updateProgress(totalResumes, totalResumes, 100, "Screening complete!");
+
+              setTimeout(() => {
+                closeModal();
+                resetForm();
+                const storedJob = {
+                  job_id:           jobId,
+                  db_job_id:        dbJobId,
+                  title:            jobTitle,
+                  created_at:       new Date().toISOString(),
+                  total_processed:  job.results.total_processed,
+                  shortlisted_count:job.results.shortlisted_count,
+                  review_count:     job.results.review_count     || 0,
+                  rejected_count:   job.results.rejected_count   || 0,
+                  knocked_out:      job.results.knocked_out       || 0,
+                  ai_evaluated:     job.results.ai_evaluated      || 0,
+                  views:            0,
+                  application_count:0,
+                  results:          job.results,
+                };
+                saveJob(storedJob);
+                showPipeline(0);
+              }, 600);
+
+            } else if (job.status === "failed") {
+              clearInterval(pollInterval);
+              pollInterval = null;
+              alert("Processing failed: " + (job.error || "Unknown error"));
+              showModalForm();
+            }
+          } catch (error) {
+            console.error("Polling error:", error);
+          }
+        }, 2000);
+      }
+
+      // ==========================================
+      // PROGRESS HELPERS
+      // ==========================================
+      function updateProgress(processed, total, pct, label) {
+        document.getElementById("progress-bar").style.width    = pct + "%";
+        document.getElementById("progress-percent").textContent = pct + "%";
+        document.getElementById("progress-label").textContent   = label;
+        if (total > 0) {
+          document.getElementById("modal-loading-subtitle").textContent = `${processed} of ${total} resumes analyzed`;
+        }
+      }
+
+      function activateStage(stageNum) {
+        [1, 2, 3].forEach(n => {
+          const el = document.getElementById(`stage-${n}`);
+          if (el) el.classList.remove("stage-active");
+        });
+        for (let i = 1; i <= stageNum; i++) {
+          const el = document.getElementById(`stage-${i}`);
+          if (el) el.classList.add("stage-active");
+        }
+      }
+
+      // ==========================================
+      // FORM RESET
+      // ==========================================
+      function resetForm() {
+        document.getElementById("uploadForm").reset();
+        document.getElementById("zipFile").value = "";
+        document.getElementById("dropzone-title").textContent    = "Drop your ZIP file here";
+        document.getElementById("dropzone-subtitle").textContent = "or click to browse — .zip only";
+        const dz = document.getElementById("dropzone");
+        dz.classList.remove("border-slate-400", "bg-slate-50");
+        dz.classList.add("border-slate-200");
+        document.getElementById("quick-paste-panel").style.display = "none";
+        document.getElementById("qp-chevron").setAttribute("data-lucide", "chevron-down");
+      }
+
+      // ==========================================
+      // CREATE JOB POSTING FORM
+      // ==========================================
+      document.getElementById("createJobForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("createJobBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Creating...';
+
+        const title = document.getElementById("newJobTitle").value.trim();
+        const description = document.getElementById("newJobDescription").value.trim();
+        const minExperience = parseFloat(document.getElementById("newJobExperience").value);
+        const skillsStr = document.getElementById("newJobSkills").value.trim();
+        const skills = skillsStr.split(",").map(s => s.trim()).filter(Boolean);
+
+        // Build form config
+        const formConfig = {};
+        if (document.getElementById("requireLinkedIn").checked) {
+          formConfig.require_linkedin = "required";
+        }
+        if (document.getElementById("requirePortfolio").checked) {
+          formConfig.require_portfolio = "required";
+        }
+        const customQuestionsText = document.getElementById("customQuestions").value.trim();
+        if (customQuestionsText) {
+          formConfig.custom_questions = customQuestionsText.split("\n").map(q => q.trim()).filter(Boolean);
+        }
+
+        const payload = {
+          title,
+          description,
+          min_experience: minExperience,
+          required_skills: skills
+        };
+
+        try {
+          // Create the job
+          const response = await Auth.authFetch("/jobs/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || "Failed to create job");
+          }
+
+          const job = await response.json();
+
+          // If form config is provided, update it
+          if (Object.keys(formConfig).length > 0) {
+            await Auth.authFetch(`/jobs/${job.id}/form-config`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formConfig)
+            });
+          }
+
+          // Save to local storage
+          const storedJob = {
+            job_id: `job-${job.id}`,
+            db_job_id: job.id,
+            id: job.id,
+            title: job.title,
+            created_at: new Date().toISOString(),
+            total_processed: 0,
+            shortlisted_count: 0,
+            review_count: 0,
+            rejected_count: 0,
+            views: 0,
+            application_count: 0,
+            results: {
+              total_processed: 0,
+              shortlisted_count: 0,
+              review_count: 0,
+              rejected_count: 0,
+              criteria: {
+                min_experience: minExperience,
+                required_skills: skills
+              }
+            }
+          };
+          saveJob(storedJob);
+
+          // Close modal and show success
+          closeJobModal();
+          alert(`✅ Job created! You can now copy the application link from the dashboard.`);
+          
+          // Refresh view
+          showDashboard();
+          lucide.createIcons();
+
+        } catch (error) {
+          alert("Error: " + error.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Create Job Posting';
+          lucide.createIcons();
+        }
+      });
+
+      // ==========================================
+      // UTILITIES
+      // ==========================================
+      function escapeHtml(str) {
+        if (typeof str !== "string") return "";
+        return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+
+      function formatDate(iso) {
+        if (!iso) return "—";
+        try { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+        catch { return iso; }
+      }
+
+      // ==========================================
+      // PUBLIC CAREERS PORTAL LINK
+      // ==========================================
+      function copyApplicationLink(jobId, event) {
+        event.stopPropagation();
+        const baseUrl = window.location.origin;
+        const applyLink = `${baseUrl}/apply/${jobId}`;
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(applyLink).then(() => {
+          // Show success feedback
+          const btn = event.target.closest('button');
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Copied!';
+          lucide.createIcons();
+          btn.classList.remove('text-blue-600', 'hover:text-blue-800');
+          btn.classList.add('text-emerald-600');
+          
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('text-emerald-600');
+            btn.classList.add('text-blue-600', 'hover:text-blue-800');
+            lucide.createIcons();
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          alert('Failed to copy link. Please try again.');
+        });
+      }
+
+      // ==========================================
+      // INIT
+      // ==========================================
+      window.addEventListener("beforeunload", () => { if (pollInterval) clearInterval(pollInterval); });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Guard: redirect to /login if no valid JWT is stored
+        Auth.checkAuth();
+
+        // Display the logged-in user's email in the nav bar
+        const user    = Auth.getUser();
+        const emailEl = document.getElementById("nav-user-email");
+        if (user?.email && emailEl) emailEl.textContent = user.email;
+
+        showDashboard();
+        lucide.createIcons();
+      });
+    </script>
+  </body>
+</html>
