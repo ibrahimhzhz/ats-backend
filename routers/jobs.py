@@ -1,12 +1,45 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
+from datetime import date
 from database import get_db
 import models, schemas
 from services.auth import get_current_user
 from services.tasks import extract_jd_requirements_task
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
+
+
+def _validate_job_payload(payload: dict):
+    salary_min = payload.get("salary_min")
+    salary_max = payload.get("salary_max")
+    if salary_min is not None and salary_max is not None and salary_max <= salary_min:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="salary_max must be greater than salary_min.",
+        )
+
+    today = date.today()
+    application_deadline = payload.get("application_deadline")
+    if application_deadline is not None and application_deadline <= today:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="application_deadline must be a future date.",
+        )
+
+    target_hire_date = payload.get("target_hire_date")
+    if target_hire_date is not None and target_hire_date <= today:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="target_hire_date must be a future date.",
+        )
+
+    custom_questions = payload.get("custom_questions")
+    if custom_questions is not None and len(custom_questions) > 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="custom_questions can contain at most 5 items.",
+        )
 
 
 @router.post("/", response_model=schemas.JobResponse, status_code=status.HTTP_201_CREATED)
@@ -16,22 +49,26 @@ async def create_job(
     current_user: models.User = Depends(get_current_user),
 ):
     """
-    Create a new job posting with Level 1 JD Requirement Extraction.
+    Create a new job posting with Level 1 JD normalization.
     The job is automatically associated with the authenticated user's company —
     tenants cannot create jobs on behalf of another company.
     
-    The system will automatically extract verbatim requirement sentences from the
-    job description using AI (Level 1 of the Grounded JD Matching System).
+    The system will automatically extract structured requirements from the
+    job description using AI (skills, minimum years, education, visa sponsorship).
     """
+    job_data = job.model_dump()
+    _validate_job_payload(job_data)
+
     new_job = models.Job(
-        **job.model_dump(),
+        **job_data,
         company_id=current_user.company_id,  # ← injected from JWT, never from client
     )
     db.add(new_job)
     db.commit()
     db.refresh(new_job)
 
-    extract_jd_requirements_task.delay(new_job.id, current_user.company_id, new_job.description or "")
+    if new_job.status == "Live":
+        extract_jd_requirements_task.delay(new_job.id, current_user.company_id, new_job.description or "")
     
     return new_job
 
@@ -94,6 +131,9 @@ def delete_job(
     )
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+    # Explicitly delete all applicants first (belt-and-suspenders for SQLite
+    # which does not enforce FK constraints by default).
+    db.query(models.Applicant).filter(models.Applicant.job_id == job_id).delete()
     db.delete(job)
     db.commit()
 
@@ -120,13 +160,36 @@ def update_job(
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
 
-    # Update only provided fields
     update_data = job_update.model_dump(exclude_unset=True)
+    _validate_job_payload(update_data)
+
+    previous_status = job.status or "Draft"
+    next_status = update_data.get("status", previous_status)
+
+    jd_trigger_fields = {
+        "title",
+        "description",
+        "required_skills",
+        "required_experience",
+        "required_education",
+    }
+    jd_content_changed = any(field in update_data for field in jd_trigger_fields)
+
+    should_extract_jd = (
+        (previous_status == "Draft" and next_status == "Live")
+        or (previous_status == "Live" and next_status == "Live" and jd_content_changed)
+    )
+
+    # Update only provided fields
     for field, value in update_data.items():
         setattr(job, field, value)
 
     db.commit()
     db.refresh(job)
+
+    if should_extract_jd:
+        extract_jd_requirements_task.delay(job.id, current_user.company_id, job.description or "")
+
     return job
 
 

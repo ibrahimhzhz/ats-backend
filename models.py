@@ -1,7 +1,24 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, Boolean, JSON, DateTime, LargeBinary, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, Boolean, JSON, DateTime, Date, LargeBinary, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+
+
+# ==============================================================================
+# PIPELINE STAGE DEFINITIONS
+# ==============================================================================
+
+PIPELINE_STAGES = [
+    "Applied",
+    "Recruiter Screen",
+    "Hiring Manager Review",
+    "Interview",
+    "Offer",
+    "Hired",
+    "Rejected",
+]
+
+TERMINAL_STAGES = {"Hired", "Rejected"}
 
 
 # ==============================================================================
@@ -51,7 +68,7 @@ class Job(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     # Bulk-screen tracking
     tracking_id = Column(String, unique=True, nullable=True, index=True)  # UUID from job_tracker
-    status     = Column(String, default="pending")                         # pending|processing|completed|failed
+    status     = Column(String, nullable=False, default="Draft")           # Draft|Live
     total_resumes = Column(Integer, nullable=True)
     processed_resumes = Column(Integer, nullable=True, default=0)
     results    = Column(JSON, nullable=True)                               # full results dict persisted on completion
@@ -67,11 +84,34 @@ class Job(Base):
     application_count = Column(Integer, default=0)  # Track submitted applications
     form_config = Column(JSON, nullable=True)  # Custom form configuration
     
-    # Level 1: Grounded JD Requirements (extracted verbatim sentences)
-    jd_requirements = Column(JSON, nullable=True)  # List of requirement strings
+    # Level 1: Structured JD requirements baseline
+    jd_requirements = Column(JSON, nullable=True)  # {must_have_skills, minimum_years_experience, education_requirement, offers_visa_sponsorship}
+
+    # Redesigned job posting form fields
+    department = Column(String, nullable=True)
+    job_type = Column(String, nullable=True)
+    work_location_type = Column(String, nullable=True)
+    office_location = Column(String, nullable=True)
+    openings = Column(Integer, nullable=False, default=1)
+    salary_min = Column(Integer, nullable=True)
+    salary_max = Column(Integer, nullable=True)
+    currency = Column(String, nullable=False, default="USD")
+    pay_frequency = Column(String, nullable=False, default="Annual")
+    show_salary = Column(Boolean, nullable=False, default=True)
+    equity_bonus = Column(String, nullable=True)
+    nice_to_have_skills = Column(JSON, nullable=True)
+    benefits = Column(JSON, nullable=True)
+    require_cover_letter = Column(Boolean, nullable=False, default=False)
+    require_portfolio = Column(Boolean, nullable=False, default=False)
+    require_linkedin = Column(Boolean, nullable=False, default=False)
+    custom_questions = Column(JSON, nullable=True)
+    hiring_manager = Column(String, nullable=True)
+    target_hire_date = Column(Date, nullable=True)
+    application_deadline = Column(Date, nullable=True)
+    visibility = Column(String, nullable=False, default="Public")
 
     company = relationship("Company", back_populates="jobs")
-    applicants = relationship("Applicant", back_populates="job")
+    applicants = relationship("Applicant", back_populates="job", cascade="all, delete-orphan")
 
 
 class Applicant(Base):
@@ -98,12 +138,38 @@ class Applicant(Base):
     match_score = Column(Integer)
     summary = Column(Text)  # AI reasoning
     breakdown = Column(JSON, nullable=True)            # {skill_depth, title_match, experience, impact}
-    status = Column(String, default="new")             # new | rejected | shortlisted | review
+    status = Column(String, default="new")             # new | knockout | rejected | shortlisted | review
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Public Careers Portal Fields
+    cover_letter = Column(Text, nullable=True)
     linkedin_url = Column(String, nullable=True)
     portfolio_url = Column(String, nullable=True)
-    custom_answers = Column(JSON, nullable=True)  # Store custom form question answers
+    custom_answers = Column(JSON, nullable=True)  # [{question: str, answer: str}]
+
+    # Hiring Pipeline
+    pipeline_stage = Column(String, default="Applied", nullable=False)  # See PIPELINE_STAGES
+    stage_updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     job = relationship("Job", back_populates="applicants")
+    stage_history = relationship("ApplicantStageLog", back_populates="applicant", cascade="all, delete-orphan")
+
+
+# ==============================================================================
+# PIPELINE AUDIT LOG
+# ==============================================================================
+
+class ApplicantStageLog(Base):
+    """Immutable audit log — rows are never updated or deleted, only inserted."""
+    __tablename__ = "applicant_stage_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    applicant_id = Column(Integer, ForeignKey("applicants.id"), nullable=False, index=True)
+    from_stage = Column(String, nullable=False)
+    to_stage = Column(String, nullable=False)
+    changed_by_recruiter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note = Column(Text, nullable=True)
+    changed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    applicant = relationship("Applicant", back_populates="stage_history")
+    changed_by = relationship("User")

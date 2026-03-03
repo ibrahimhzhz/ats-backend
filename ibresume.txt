@@ -1,0 +1,59 @@
+Ibrahim Hasan Zubairi
++92-3360424445 | brahim.zubairi@gmail.com | Ibrahim Hasan Zubairi | github.com/ibrahim
+Education
+Karachi School of Business and Leadership
+Karachi, PK
+Bachelors in Computer Science
+Sept. 2023 – June 2027
+BeaconHouse School System
+Karachi, PK
+Pre-Medical
+Aug. 2021 – May 2023
+Experience
+AI Engineering Intern (Agentic AI)
+Jul 2025 - Aug 2025
+Salesflo— Karachi, Pakistan
+Karachi, PK
+• Engineered a WhatsApp-based AI distributor agent for retail stores, migrating end-to-end workflows from
+Make.com to Google Agentic Development Kit (ADK) with Vertex AI, reducing operational latency by 35% and
+enabling scalable deployment across distributor networks
+• Developed and optimized multi-agent orchestration using A2A protocol and advanced prompt engineering,
+improving agent decision accuracy by 20% in SKU selection, promotion handling, and manual ordering workflows
+• Automated retail distribution workflows with Google ADK tools, integrating SKU recommender, promotions
+engine, and manual order processing—cutting manual intervention time by 40% and streamlining
+distributor-to-retail store communication
+Co-Founder & CTO
+Nov 2025 - Present
+LoqAI
+Karachi, PK
+• Leading development of a full-stack HR Management & Payroll System with attendance, leave workflows,
+onboarding, and automated payroll generation.
+• Engineering seamless third-party accounting integrations to sync payroll, ledgers, expenses, and financial
+reports in real time.
+• Building an AI-powered ATS capable of resume parsing, candidate ranking, and recruiter-style LLM
+explanations.
+• Owning backend architecture, API design, cloud deployment, and the technical roadmap to deliver scalable
+multi-tenant HR and recruitment solutions.
+• Architected a secure, scalable multi-tenant SaaS using FastAPI, React, PostgreSQL, JWT auth, and cloud-native
+deployment.
+Projects
+Airline Reservation System | Java, Swing, JDBC, MsSQL
+Feb 2025 – June 2025
+• Built a role-based Airline Reservation System with flight search, booking, payments, and admin
+controls—improving workflow efficiency by 40% through stored procedures and input validation.
+• Engineered secure, modular MsSQL interactions using stored procedures, transactions, and RBAC, eliminating
+SQL injection risk and ensuring data integrity across 10+ relational tables.
+• Developed an intuitive Swing GUI supporting User, Admin, and Super Admin roles with seat selection, refunds,
+and airline management, enabling fully guided user operations without manual intervention.
+AutoLog – Smart Car Management App | Java, MySQL
+June 2025 – Present
+• Developing a MySQL-backed mobile app for vehicle maintenance, fuel logging, and diagnostics.
+• Engineering an Arduino-integrated GPS tracker to automate fuel stop detection via Bluetooth/Wi-Fi.
+• Implementing an AI-driven diagnostics module for issue classification and repair recommendations.
+Technical Skills
+Programming Languages: Java, Python, SQL
+AI & Agentic Systems: Google Agentic Development Kit (ADK), Multi-Agent Orchestration, Tool-Calling LLM
+Agents, Prompt Engineering, A2A Protocol, Workflow Automation, n8n, Make.com, LangChain
+AI Platforms & Cloud: Vertex AI, Google Colab
+Data Science & Analytics: Pandas, NumPy, Regression
+Backend & Application Development: Spring Boot, REST APIs, FastAPI

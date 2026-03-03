@@ -6,10 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal, run_migrations
 from routers import jobs, applicants, auth as auth_router
 from routers import public as public_router  # Public careers portal
+from routers import pipeline as pipeline_router  # Hiring pipeline stage management
 from services.pdf_parser import extract_text_from_pdf
 from services.ai_engine import (
     extract_candidate_facts,
     calculate_deterministic_score,
+    extract_jd_requirements,
+    evaluate_knockout_filters,
+    normalize_job_requirements,
     is_ai_available,
     get_ai_unavailable_reason,
     AIServiceUnavailableError,
@@ -32,7 +36,7 @@ from services.tasks import process_resume
 
 # Create Tables + run safe schema migrations
 Base.metadata.create_all(bind=engine)
-# run_migrations()
+run_migrations()
 
 app = FastAPI(
     title="AI Recruiter ATS",
@@ -52,7 +56,11 @@ async def _job_tracker_cleanup_loop():
         removed = job_tracker.cleanup_old_jobs(max_age_hours=JOB_TRACKER_MAX_AGE_HOURS)
         if removed:
             print(f"🧹 Job tracker cleanup removed {removed} stale jobs")
-
+"""
+When FastAPI starts, a cleanup loop runs in the background.
+It only starts one instance of the cleanup loop.
+The loop runs asynchronously, so it doesn’t block handling API requests.
+"""
 
 @app.on_event("startup")
 async def _startup_background_tasks():
@@ -60,7 +68,13 @@ async def _startup_background_tasks():
     if _job_tracker_cleanup_task is None:
         _job_tracker_cleanup_task = asyncio.create_task(_job_tracker_cleanup_loop())
 
+"""
+This code automatically starts a background cleanup task when FastAPI launches.
 
+The task runs forever asynchronously without blocking API requests.
+
+Old jobs/resumes are cleaned periodically based on your earlier JOB_TRACKER_MAX_AGE_HOURS and JOB_TRACKER_CLEANUP_INTERVAL_SECONDS settings.
+"""
 @app.on_event("shutdown")
 async def _shutdown_background_tasks():
     global _job_tracker_cleanup_task
@@ -79,7 +93,7 @@ app.add_middleware(SecurityLoggingMiddleware)
 # CORS configuration (adjust origins as needed for production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000"],  # Add your frontend URLs
+    allow_origins=["http://localhost:8001"],  # Add your frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -95,6 +109,7 @@ app.include_router(public_router.router)  # Public careers portal (must be first
 app.include_router(auth_router.router)
 app.include_router(jobs.router)
 app.include_router(applicants.router)
+app.include_router(pipeline_router.router)  # Hiring pipeline management
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -120,284 +135,6 @@ def health():
         "ai_ready": ai_ready,
         "ai_reason": None if ai_ready else get_ai_unavailable_reason(),
     }
-
-
-async def process_resumes_background(
-    tracking_job_id: str,
-    db_job_id: int,
-    company_id: int,
-    job_title: str,
-    zip_content: bytes,
-    job_description: str,
-    min_experience: float,
-    required_skills: List[str],
-):
-    """
-    Enterprise resume screening pipeline.
-
-    Stage 1: Fast deduplication     — regex email + DB lookup (free, no AI)
-    Stage 2: Deep fact extraction   — single Gemini call, strict JSON schema
-    Stage 3: Strict knockouts       — rule-based, 50% skill floor (free)
-    Stage 4: Deterministic scoring  — pure Python, 100% repeatable
-    Stage 5: Persist + summarise    — Python-generated summary, no LLM
-    """
-    db = SessionLocal()
-
-    try:
-        if not is_ai_available():
-            raise AIServiceUnavailableError(
-                get_ai_unavailable_reason() or "AI extraction service unavailable"
-            )
-
-        job_tracker.update_status(tracking_job_id, JobStatus.PROCESSING)
-
-        # Load job object for JD requirements
-        db_job = db.query(models.Job).filter(models.Job.id == db_job_id).first()
-        if not db_job:
-            raise Exception(f"Job {db_job_id} not found")
-
-        # Mark DB job as processing
-        db.query(models.Job).filter(models.Job.id == db_job_id).update(
-            {"status": "processing", "processed_resumes": 0}
-        )
-        db.commit()
-
-        zip_file = zipfile.ZipFile(io.BytesIO(zip_content))
-        candidates: List[Dict[str, Any]] = []
-
-        stats = {
-            "total_processed": 0,
-            "duplicates_skipped": 0,
-            "knocked_out": 0,
-            "scored": 0,
-            "shortlisted": 0,
-            "review": 0,
-            "rejected": 0,
-        }
-
-        pdf_files = [f for f in zip_file.namelist() if f.lower().endswith(".pdf")]
-        total_files = len(pdf_files)
-
-        print(f"🚀 New Pipeline | {total_files} resumes | '{job_title}' | "
-              f"{min_experience} yrs | {len(required_skills)} skills")
-
-        for idx, filename in enumerate(pdf_files):
-            try:
-                pdf_bytes = zip_file.read(filename)
-                resume_text = extract_text_from_pdf(pdf_bytes)
-
-                if len(resume_text) < 50:
-                    print(f"⚠️  Skipping {filename} — insufficient text")
-                    continue
-
-                # ════════════════════════════════════════════════════════
-                # STAGE 1: FAST DEDUPLICATION  (before any AI call)
-                # ════════════════════════════════════════════════════════
-                email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
-                pre_scan_email = email_match.group(0).lower() if email_match else None
-
-                if pre_scan_email:
-                    duplicate = (
-                        db.query(models.Applicant)
-                        .filter(
-                            models.Applicant.job_id == db_job_id,
-                            models.Applicant.email == pre_scan_email,
-                        )
-                        .first()
-                    )
-                    if duplicate:
-                        print(f"⏭️  DUPLICATE: {filename} ({pre_scan_email}) — skipped")
-                        stats["duplicates_skipped"] += 1
-                        continue
-
-                # ════════════════════════════════════════════════════════
-                # STAGE 2: DEEP FACT EXTRACTION  (single AI call)
-                # Level 2: Pass JD requirements if available for grounded verification
-                # ════════════════════════════════════════════════════════
-                job_jd_requirements = db_job.jd_requirements if db_job else None
-                candidate_data = await extract_candidate_facts(resume_text, job_jd_requirements)
-
-                total_years_experience: float = candidate_data["total_years_experience"]
-                skills_with_years: Dict[str, float] = candidate_data["skills_with_years"]
-
-                # ════════════════════════════════════════════════════════
-                # STAGE 3: STRICT KNOCKOUTS  (rule-based, no AI)
-                # ════════════════════════════════════════════════════════
-                knocked_out = False
-                knockout_reason = ""
-
-                # Knockout 1 — Experience floor (0.5-year buffer)
-                if total_years_experience < (min_experience - 0.5):
-                    knocked_out = True
-                    knockout_reason = (
-                        f"Insufficient experience: {total_years_experience:.1f} yrs "
-                        f"(required ≥ {min_experience - 0.5:.1f})"
-                    )
-
-                # Knockout 2 — Skill floor (must match ≥ 50% of required skills)
-                if not knocked_out and required_skills:
-                    candidate_skill_keys = {k.lower() for k in skills_with_years}
-                    required_lower = [s.lower() for s in required_skills]
-                    matched_ko = [
-                        s for s in required_lower
-                        if any(s in k or k in s for k in candidate_skill_keys)
-                    ]
-                    coverage = len(matched_ko) / len(required_lower)
-                    if coverage < 0.50:
-                        knocked_out = True
-                        knockout_reason = (
-                            f"Skill floor not met: {len(matched_ko)}/{len(required_lower)} "
-                            f"required skills present ({coverage:.0%})"
-                        )
-
-                if knocked_out:
-                    print(f"❌ KNOCKOUT: {filename} — {knockout_reason}")
-                    final_score = 0
-                    assessment_status = "rejected"
-                    summary = f"Rejected at screening: {knockout_reason}"
-                    stats["knocked_out"] += 1
-                    stats["rejected"] += 1
-
-                else:
-                    # ════════════════════════════════════════════════════
-                    # STAGE 4: DETERMINISTIC PYTHON SCORING
-                    # Level 3: Anti-hallucination verification with raw resume text
-                    # ════════════════════════════════════════════════════
-                    result = calculate_deterministic_score(
-                        candidate=candidate_data,
-                        required_skills=required_skills,
-                        min_experience=min_experience,
-                        job_title=job_title,
-                        raw_resume_text=resume_text,
-                    )
-                    final_score = result["final_score"]
-                    assessment_status = result["status"]
-                    summary = result["summary"]
-                    stats["scored"] += 1
-                    stats[assessment_status] += 1
-                    print(
-                        f"⚖️  SCORED: {filename} — {final_score}/100 "
-                        f"({assessment_status.upper()}) | "
-                        f"Skill:{result['breakdown']['skill_depth']:.0f} "
-                        f"JD:{result['breakdown']['jd_requirements']:.0f} "
-                        f"Exp:{result['breakdown']['experience']:.0f} "
-                        f"Impact:{result['breakdown']['impact']:.0f}"
-                    )
-
-                # ════════════════════════════════════════════════════════
-                # STAGE 5: DATABASE PERSISTENCE
-                # ════════════════════════════════════════════════════════
-                db_applicant = models.Applicant(
-                    job_id=db_job_id,
-                    company_id=company_id,
-                    name=candidate_data.get("name", "Unknown"),
-                    email=candidate_data.get("email", pre_scan_email or "N/A"),
-                    phone=candidate_data.get("phone", ""),
-                    resume_text=resume_text[:10000],
-                    resume_pdf=pdf_bytes,  # Store original PDF for download
-                    years_experience=int(total_years_experience),
-                    skills=skills_with_years,   # dict stored as JSON
-                    match_score=final_score,
-                    summary=summary,
-                    status=assessment_status,
-                    breakdown=result["breakdown"] if not knocked_out else None,
-                )
-                db.add(db_applicant)
-                db.commit()
-                db.refresh(db_applicant)
-
-                candidates.append({
-                    "id": db_applicant.id,
-                    "filename": filename,
-                    "name": db_applicant.name,
-                    "email": db_applicant.email,
-                    "years_experience": total_years_experience,
-                    "skills": skills_with_years,
-                    "match_score": final_score,
-                    "summary": summary,
-                    "status": assessment_status,
-                    "breakdown": result["breakdown"] if not knocked_out else None,
-                })
-
-                stats["total_processed"] += 1
-                print(f"💾 SAVED: {idx + 1}/{total_files} — {filename}")
-
-            except Exception as e:
-                print(f"❌ Error processing {filename}: {str(e)}")
-                db.rollback()   # keep the session clean after any mid-loop error
-            finally:
-                job_tracker.update_progress(tracking_job_id, idx + 1)
-                db.query(models.Job).filter(models.Job.id == db_job_id).update(
-                    {"processed_resumes": idx + 1}
-                )
-                db.commit()
-
-        # Sort by score descending
-        candidates.sort(key=lambda x: x["match_score"], reverse=True)
-        if candidates:
-            top_10_percent = max(1, len(candidates) // 10)
-            shortlisted = candidates[:top_10_percent]  # EXACT TOP N
-        else:
-            shortlisted = []
-
-        stats["shortlisted"] = len(shortlisted)
-        stats["review"] = sum(1 for c in candidates if c["status"] == "review")
-        stats["rejected"] = sum(1 for c in candidates if c["status"] == "rejected")
-
-        results = {
-            "total_processed": stats["total_processed"],
-            "duplicates_skipped": stats["duplicates_skipped"],
-            "knocked_out": stats["knocked_out"],
-            "scored": stats["scored"],
-            "shortlisted_count": stats["shortlisted"],
-            "review_count": stats["review"],
-            "rejected_count": stats["rejected"],
-            "shortlisted": shortlisted,
-            "all_candidates": candidates,
-            "criteria": {
-                "job_title": job_title,
-                "min_experience": min_experience,
-                "required_skills": required_skills,
-            },
-        }
-        job_tracker.set_results(tracking_job_id, results)
-
-        # Persist final results + status to DB
-        db.query(models.Job).filter(models.Job.id == db_job_id).update(
-            {
-                "status": "completed",
-                "results": results,
-                "total_resumes": total_files,
-                "processed_resumes": stats["total_processed"],
-            }
-        )
-        db.commit()
-
-        print(f"🎉 Pipeline Complete!")
-        print(
-            f"📊 {stats['total_processed']} processed | "
-            f"{stats['duplicates_skipped']} duplicates | "
-            f"{stats['knocked_out']} knocked out | "
-            f"{stats['scored']} scored"
-        )
-        print(
-            f"📊 {stats['shortlisted']} shortlisted | "
-            f"{stats['review']} review | "
-            f"{stats['rejected']} rejected"
-        )
-
-    except Exception as e:
-        print(f"❌ Job {tracking_job_id} failed: {str(e)}")
-        job_tracker.update_status(tracking_job_id, JobStatus.FAILED, error=str(e))
-        try:
-            db.query(models.Job).filter(models.Job.id == db_job_id).update({"status": "failed"})
-            db.commit()
-        except Exception:
-            pass
-    finally:
-        db.close()
-
-
 
 @app.post("/api/bulk-screen")
 async def bulk_screen_resumes(
@@ -439,6 +176,13 @@ async def bulk_screen_resumes(
 
         skills_list = [s.strip() for s in required_skills.split(",") if s.strip()]
         normalized_min_experience = int(min_experience)
+        extracted_requirements = await extract_jd_requirements(job_description)
+        normalized_requirements = normalize_job_requirements(extracted_requirements)
+
+        effective_skills = normalized_requirements["must_have_skills"] or skills_list
+        extracted_min_exp = normalized_requirements["minimum_years_experience"]
+        effective_min_experience = int(extracted_min_exp) if extracted_min_exp > 0 else normalized_min_experience
+
         clean_title = job_title.strip() or f"Screening — {total_resumes} resumes"
 
         db = SessionLocal()
@@ -446,8 +190,9 @@ async def bulk_screen_resumes(
             db_job = models.Job(
                 title=clean_title,
                 description=job_description,
-                min_experience=normalized_min_experience,
-                required_skills=skills_list,
+                min_experience=effective_min_experience,
+                required_skills=effective_skills,
+                jd_requirements=normalized_requirements,
                 is_active=True,
                 company_id=current_user.company_id,
             )
@@ -493,8 +238,9 @@ async def bulk_screen_resumes(
             "job_id": tracking_job_id,
             "db_job_id": db_job_id,
             "total_resumes": total_resumes,
-            "min_experience": normalized_min_experience,
-            "required_skills": skills_list,
+            "min_experience": effective_min_experience,
+            "required_skills": effective_skills,
+            "job_requirements": normalized_requirements,
             "message": "Processing started. Use the job_id to check progress."
         })
         

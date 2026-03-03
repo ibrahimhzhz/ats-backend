@@ -31,42 +31,114 @@
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
-    <!-- Inter Font -->
+    <!-- Inter + Space Grotesk Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
     <!-- Auth layer (must come before any inline scripts that call Auth.*) -->
     <script src="/static/js/auth.js"></script>
 
     <style>
+      :root {
+        --primary: #6366f1;
+        --primary-light: #818cf8;
+        --accent: #22d3ee;
+        --accent2: #a855f7;
+        --dark: #05050f;
+        --dark2: #0d0d20;
+        --dark3: #12122a;
+        --border: rgba(99,102,241,0.2);
+        --text-main: #e2e8f0;
+        --text-muted: #94a3b8;
+        --glass: rgba(255,255,255,0.03);
+        --glass-border: rgba(255,255,255,0.08);
+      }
+
       * { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+      h1, h2, h3, h4 {
+        font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: -0.02em;
+      }
 
-      .bg-slate-900 { background-color: #1e3a8a !important; }
-      .bg-slate-800 { background-color: #1e40af !important; }
-      .bg-slate-100 { background-color: #dbeafe !important; }
-      .bg-slate-50 { background-color: #eff6ff !important; }
-      .text-slate-900 { color: #0f172a !important; }
-      .text-slate-700 { color: #1e3a8a !important; }
-      .text-slate-600 { color: #1d4ed8 !important; }
-      .text-slate-500 { color: #475569 !important; }
-      .text-slate-400 { color: #64748b !important; }
-      .border-slate-300 { border-color: #93c5fd !important; }
-      .border-slate-200 { border-color: #bfdbfe !important; }
-      .border-slate-100 { border-color: #dbeafe !important; }
-      .hover\:bg-slate-700:hover { background-color: #1d4ed8 !important; }
-      .hover\:bg-slate-50:hover { background-color: #eff6ff !important; }
+      body {
+        background: radial-gradient(circle at 14% 0%, rgba(99,102,241,0.12), transparent 36%),
+                    radial-gradient(circle at 86% 18%, rgba(168,85,247,0.1), transparent 38%),
+                    var(--dark) !important;
+        color: var(--text-main) !important;
+      }
 
-      ::-webkit-scrollbar { width: 5px; height: 5px; }
-      ::-webkit-scrollbar-track { background: #f1f5f9; }
-      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .bg-slate-900 {
+        background: linear-gradient(135deg, var(--primary), var(--accent2)) !important;
+        color: #fff !important;
+      }
+      .bg-slate-800 { background-color: var(--primary) !important; }
+      .bg-slate-100 { background-color: rgba(99,102,241,0.14) !important; }
+      .bg-slate-50,
+      .bg-slate-50\/60,
+      .bg-slate-50\/80 { background-color: rgba(13,13,32,0.9) !important; }
+      .bg-white,
+      .bg-white\/60,
+      .bg-white\/80,
+      .bg-white\/10 { background: var(--glass) !important; }
+
+      .text-slate-900,
+      .text-slate-800,
+      .text-slate-700,
+      .text-slate-600 { color: var(--text-main) !important; }
+      .text-slate-500,
+      .text-slate-400,
+      .text-slate-300 { color: var(--text-muted) !important; }
+
+      .border-slate-300,
+      .border-slate-200,
+      .border-slate-100 { border-color: var(--border) !important; }
+
+      .hover\:bg-slate-700:hover,
+      .hover\:bg-slate-800:hover { filter: brightness(1.08); }
+      .hover\:bg-slate-50:hover { background: rgba(99,102,241,0.12) !important; }
+
+      .shadow-sm,
+      .shadow-xl,
+      .shadow-2xl {
+        box-shadow: 0 16px 40px rgba(0,0,0,0.38) !important;
+      }
+
+      header {
+        background: rgba(5,5,15,0.7) !important;
+        backdrop-filter: blur(20px);
+      }
+
+      input, textarea, select {
+        background: var(--dark2) !important;
+        color: var(--text-main) !important;
+        border-color: var(--border) !important;
+      }
+      input::placeholder,
+      textarea::placeholder { color: var(--text-muted) !important; }
+
+      .focus\:ring-blue-100:focus,
+      .focus\:ring-slate-400:focus {
+        --tw-ring-color: rgba(99,102,241,0.35) !important;
+      }
+      .focus\:border-blue-300:focus,
+      .focus\:border-transparent:focus { border-color: var(--primary-light) !important; }
+
+      .rounded-xl,
+      .rounded-2xl,
+      .rounded-lg { border-radius: 16px !important; }
+
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: var(--dark) !important; }
+      ::-webkit-scrollbar-thumb { background: var(--primary) !important; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--primary-light) !important; }
 
       .drag-active {
-        border-color: #3b82f6 !important;
-        background-color: #eff6ff !important;
+        border-color: var(--primary) !important;
+        background-color: rgba(99,102,241,0.12) !important;
       }
-      .drag-active #dz-icon { color: #3b82f6 !important; }
+      .drag-active #dz-icon { color: var(--accent) !important; }
 
       .progress-animated {
         background-image: linear-gradient(
@@ -83,14 +155,110 @@
       .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-clamp: 3; }
 
       .candidate-row { transition: background-color 0.1s ease; }
-      .candidate-row:hover { background-color: #f8fafc; }
+      .candidate-row:hover { background-color: rgba(99,102,241,0.08); }
       .job-row { cursor: pointer; transition: background-color 0.1s ease; }
-      .job-row:hover { background-color: #f8fafc; }
+      .job-row:hover { background-color: rgba(99,102,241,0.08); }
 
       .view { animation: fade-in 0.18s ease-out; }
 
-      .stage-active { border-color: #1e293b !important; background-color: #f8fafc !important; }
-      .stage-active i { color: #0f172a !important; }
+      .stage-active { border-color: var(--primary) !important; background: rgba(99,102,241,0.12) !important; }
+      .stage-active i { color: var(--accent) !important; }
+
+      /* Toast notifications */
+      .toast-container {
+        position: fixed; top: 4rem; right: 1.5rem; z-index: 9999;
+        display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+      }
+      .toast {
+        pointer-events: auto; padding: 0.75rem 1rem; border-radius: 12px;
+        font-size: 0.8125rem; font-weight: 500; color: var(--text-main);
+        backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: fade-in 0.18s ease-out;
+        max-width: 380px; transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      .toast-success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); }
+      .toast-error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); }
+      .toast-info { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); }
+
+      /* Kanban board */
+      .kanban-board {
+        display: flex; gap: 0.75rem; overflow-x: auto;
+        padding-bottom: 1rem; min-height: 400px;
+      }
+      .kanban-column {
+        flex: 0 0 240px; min-width: 240px; background: var(--dark3);
+        border: 1px solid var(--border); border-radius: 12px;
+        display: flex; flex-direction: column; max-height: calc(100vh - 280px);
+      }
+      .kanban-column-header {
+        padding: 0.75rem; border-bottom: 1px solid var(--border);
+        font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--text-muted);
+        display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+      }
+      .kanban-column-body {
+        padding: 0.5rem; overflow-y: auto; flex: 1;
+        display: flex; flex-direction: column; gap: 0.5rem; min-height: 60px;
+      }
+      .kanban-column.drag-over .kanban-column-body {
+        background: rgba(99,102,241,0.1); border-radius: 0 0 12px 12px;
+      }
+      .kanban-column-terminal { opacity: 0.75; border-style: dashed; }
+      .kanban-column-terminal .kanban-column-header { color: var(--text-muted); }
+      .kanban-card {
+        background: var(--dark2); border: 1px solid var(--border); border-radius: 10px;
+        padding: 0.625rem 0.75rem; cursor: grab;
+        transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+        user-select: none;
+      }
+      .kanban-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+      .kanban-card.dragging { opacity: 0.5; border-color: var(--primary); box-shadow: 0 8px 24px rgba(99,102,241,0.3); }
+
+      /* Stage history timeline */
+      .timeline { position: relative; padding-left: 1.5rem; }
+      .timeline::before {
+        content: ''; position: absolute; left: 0.4375rem; top: 0.5rem; bottom: 0.5rem;
+        width: 2px; background: var(--border);
+      }
+      .timeline-entry { position: relative; padding-bottom: 1.25rem; }
+      .timeline-entry:last-child { padding-bottom: 0; }
+      .timeline-dot {
+        position: absolute; left: -1.5rem; top: 0.25rem;
+        width: 0.625rem; height: 0.625rem; border-radius: 50%;
+        background: var(--primary); border: 2px solid var(--dark2); z-index: 1;
+      }
+
+      /* Pipeline stage badge */
+      .pipeline-stage-badge {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        padding: 0.125rem 0.5rem; border-radius: 9999px;
+        font-size: 0.6875rem; font-weight: 600; white-space: nowrap;
+      }
+
+      /* Confirm dialog overlay */
+      .confirm-overlay {
+        position: fixed; inset: 0; z-index: 9998;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(5,5,15,0.6); backdrop-filter: blur(8px);
+      }
+      .confirm-box {
+        background: var(--dark2); border: 1px solid var(--border);
+        border-radius: 16px; padding: 1.5rem;
+        max-width: 400px; width: 90%; box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      }
+
+      /* View toggle buttons */
+      .view-toggle-btn {
+        padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500;
+        border-radius: 0.5rem; transition: all 0.15s ease;
+        cursor: pointer; border: 1px solid transparent;
+      }
+      .view-toggle-active {
+        background: var(--glass); border-color: var(--primary);
+        color: var(--primary-light); box-shadow: 0 0 8px rgba(99,102,241,0.2);
+      }
+      .view-toggle-inactive { color: var(--text-muted); }
+      .view-toggle-inactive:hover { color: var(--text-main); background: var(--glass); }
     </style>
   </head>
   <body class="h-full bg-blue-50 text-slate-900 antialiased">
@@ -111,12 +279,12 @@
         </div>
         <!-- Right side: status pill + user email + logout -->
         <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">
+          <div id="ai-health-indicator" class="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">
             <span class="relative flex h-2 w-2">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span id="ai-health-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="ai-health-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span class="text-xs font-medium text-emerald-700">AI Engine Active</span>
+            <span id="ai-health-label" class="text-xs font-medium text-emerald-700">AI Engine Active</span>
           </div>
           <!-- User info + logout -->
           <span id="nav-user-email" class="text-xs text-slate-400 hidden sm:block"></span>
@@ -131,6 +299,9 @@
       </div>
     </header>
 
+    <!-- Toast notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- =========================================================
          DASHBOARD VIEW
     ========================================================= -->
@@ -143,7 +314,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button
-            onclick="refreshJobAnalytics().then(() => { renderSessionsTable(); lucide.createIcons(); })"
+            onclick="refreshJobAnalytics().then(() => renderMetrics().then(() => { renderSessionsTable(); lucide.createIcons(); }))"
             class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-sm font-medium px-3 py-2.5 rounded-lg transition-colors"
             title="Refresh analytics"
           >
@@ -227,18 +398,29 @@
           <h1 class="text-2xl font-semibold text-slate-900" id="pipeline-title">Candidate Pipeline</h1>
           <p class="text-slate-500 text-sm mt-1" id="pipeline-subtitle"></p>
         </div>
-        <button
-          onclick="openModal()"
-          class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm self-start"
-        >
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          New Screen
-        </button>
+        <div class="flex items-center gap-2 self-start">
+          <div class="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5" id="pipeline-view-toggle">
+            <button onclick="setPipelineView('list')" data-view="list" class="view-toggle-btn view-toggle-active">
+              <i data-lucide="list" class="w-3.5 h-3.5 inline-block align-middle mr-1"></i>List
+            </button>
+            <button onclick="setPipelineView('kanban')" data-view="kanban" class="view-toggle-btn view-toggle-inactive">
+              <i data-lucide="columns" class="w-3.5 h-3.5 inline-block align-middle mr-1"></i>Board
+            </button>
+          </div>
+          <button
+            onclick="openModal()"
+            class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            New Screen
+          </button>
+        </div>
       </div>
 
       <div id="pipeline-stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"></div>
       <div id="pipeline-criteria" class="mb-5"></div>
 
+      <div id="pipeline-list-view">
       <div class="mb-4 space-y-3">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
@@ -301,7 +483,37 @@
       </div>
 
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+        <!-- Bulk action bar — visible only when rows are selected -->
+        <div id="bulk-action-bar" style="display:none" class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/80 flex items-center gap-3 flex-wrap">
+          <span id="bulk-selected-count" class="text-xs font-semibold text-slate-700"></span>
+          <select id="bulk-status-select"
+            class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300">
+            <option value="">— Set Status —</option>
+            <option value="shortlisted">Shortlisted</option>
+            <option value="review">Needs Review</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button onclick="applyBulkStatus()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-900 hover:bg-slate-700 text-white rounded-lg transition-colors">
+            Apply
+          </button>
+          <button onclick="clearBulkSelection()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-500 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg transition-colors">
+            <i data-lucide="x" class="w-3 h-3"></i>
+            Clear
+          </button>
+        </div>
         <div id="candidate-table-container"></div>
+      </div>
+      </div><!-- /pipeline-list-view -->
+
+      <!-- Kanban Pipeline Board -->
+      <div id="pipeline-kanban-view" style="display:none">
+        <div id="kanban-loading" class="py-12 flex flex-col items-center gap-3" style="display:none">
+          <div class="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-slate-400 text-sm">Loading pipeline board...</p>
+        </div>
+        <div id="kanban-board" class="kanban-board"></div>
       </div>
     </div>
 
@@ -498,85 +710,56 @@
           </div>
         </div>
 
-        <!-- Form -->
-        <form id="createJobForm" class="px-6 py-5 space-y-5">
-          
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobTitle">
-              Job Title <span class="text-red-400 font-normal">*</span>
-            </label>
-            <input type="text" id="newJobTitle" required
-              placeholder="e.g., Senior Full-Stack Engineer"
-              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
-          </div>
+        <div id="create-job-form-root" class="px-6 py-5"></div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobDescription">
-              Job Description <span class="text-red-400 font-normal">*</span>
-            </label>
-            <textarea id="newJobDescription" rows="6" required
-              placeholder="Enter the full job description, responsibilities, and qualifications..."
-              class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition resize-none bg-white"></textarea>
-          </div>
+      </div>
+    </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobExperience">
-                Min. Experience (Years) <span class="text-red-400 font-normal">*</span>
-              </label>
-              <input type="number" id="newJobExperience" step="0.5" min="0" max="30" value="3.0" required
-                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition bg-white" />
+    <!-- =========================================================
+         CANDIDATE DETAIL MODAL
+    ========================================================= -->
+    <div id="candidate-detail-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeCandidateDetail()"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10 rounded-t-2xl">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="user" class="w-4 h-4 text-blue-400"></i>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="newJobSkills">
-                Required Skills <span class="text-red-400 font-normal">*</span>
-              </label>
-              <input type="text" id="newJobSkills" required
-                placeholder="Python, FastAPI, PostgreSQL"
-                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white" />
+              <h2 class="font-semibold text-slate-900 text-sm">Candidate Profile</h2>
+              <p class="text-xs text-slate-400">View details &amp; manage pipeline stage</p>
             </div>
           </div>
+          <button onclick="closeCandidateDetail()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div id="candidate-detail-content" class="px-6 py-5"></div>
+      </div>
+    </div>
 
-          <!-- Optional: Form Configuration -->
-          <div class="border-t border-slate-200 pt-5 mt-5">
-            <h3 class="text-xs font-semibold text-slate-700 mb-3">Application Form Settings (Optional)</h3>
-            
-            <div class="space-y-3">
-              <label class="flex items-center gap-2">
-                <input type="checkbox" id="requireLinkedIn" class="rounded border-slate-300 text-slate-900 focus:ring-slate-400">
-                <span class="text-sm text-slate-700">Require LinkedIn Profile</span>
-              </label>
-              
-              <label class="flex items-center gap-2">
-                <input type="checkbox" id="requirePortfolio" class="rounded border-slate-300 text-slate-900 focus:ring-slate-400">
-                <span class="text-sm text-slate-700">Require Portfolio URL</span>
-              </label>
-              
-              <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="customQuestions">
-                  Custom Questions (one per line)
-                </label>
-                <textarea id="customQuestions" rows="3"
-                  placeholder="Why do you want to work here?&#10;What's your biggest achievement?"
-                  class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition resize-none bg-white"></textarea>
-              </div>
+    <!-- =========================================================
+         EDIT JOB MODAL
+    ========================================================= -->
+    <div id="edit-job-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeEditJobModal()"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10 rounded-t-2xl">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="pencil" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div>
+              <h2 class="font-semibold text-slate-900 text-sm">Edit Job Posting</h2>
+              <p class="text-xs text-slate-400">Update job details and requirements</p>
             </div>
           </div>
-
-          <!-- Action buttons -->
-          <div class="flex justify-end items-center gap-3 pt-2 border-t border-slate-100">
-            <button type="button" onclick="closeJobModal()"
-              class="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 rounded-lg transition-all">
-              Cancel
-            </button>
-            <button type="submit" id="createJobBtn"
-              class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-              Create Job Posting
-            </button>
-          </div>
-        </form>
-
+          <button onclick="closeEditJobModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div id="edit-job-form-root" class="px-6 py-5"></div>
       </div>
     </div>
 
@@ -600,6 +783,7 @@
       let candidateExperienceFilter = "all";
       let candidateScoreFilter = "all";
       let candidateSkillFilter = "";
+      let pipelineViewMode = "list";
 
       // ==========================================
       // LOCAL STORAGE — JOB PERSISTENCE
@@ -629,10 +813,19 @@
       // Fetch live analytics from the API and merge with localStorage
       async function refreshJobAnalytics() {
         try {
-          const response = await Auth.authFetch("/jobs/");
-          if (!response.ok) return;
-          
-          const liveJobs = await response.json();
+          const [jobsRes, bulkRes] = await Promise.all([
+            Auth.authFetch("/jobs/"),
+            Auth.authFetch("/api/jobs"),
+          ]);
+
+          const liveJobs  = jobsRes.ok  ? await jobsRes.json()  : [];
+          const bulkData  = bulkRes.ok  ? await bulkRes.json()  : { jobs: [] };
+          const bulkJobs  = bulkData.jobs || [];
+
+          // Build a quick-lookup map of bulk jobs by db_job_id
+          const bulkByDbId = new Map();
+          bulkJobs.forEach(b => { if (b.db_job_id) bulkByDbId.set(b.db_job_id, b); });
+
           const storedJobs = getStoredJobs();
 
           // Update existing stored jobs with live values
@@ -643,6 +836,9 @@
               storedJob.application_count = liveJob.application_count || 0;
               storedJob.is_active = liveJob.is_active;
               storedJob.title = liveJob.title || storedJob.title;
+              storedJob.description = liveJob.description || storedJob.description;
+              storedJob.min_experience = liveJob.min_experience;
+              storedJob.required_skills = liveJob.required_skills || [];
 
               if (!storedJob.results) storedJob.results = {};
               if (!storedJob.results.criteria) {
@@ -652,30 +848,55 @@
                 };
               }
             }
+
+            // Merge bulk-screen tracking info if available
+            const dbId = storedJob.db_job_id || storedJob.id;
+            const bulk = dbId ? bulkByDbId.get(dbId) : null;
+            if (bulk) {
+              storedJob.tracking_id  = bulk.id || storedJob.tracking_id;
+              storedJob.bulk_status  = bulk.status;
+              storedJob.total_resumes = bulk.total_resumes;
+              // Merge result counts from DB if local data is stale
+              if (bulk.results) {
+                const br = bulk.results;
+                storedJob.total_processed  = br.total_processed || storedJob.total_processed || 0;
+                storedJob.shortlisted_count = br.shortlisted_count || storedJob.shortlisted_count || 0;
+                storedJob.review_count      = br.review_count || storedJob.review_count || 0;
+                storedJob.rejected_count    = br.rejected_count || storedJob.rejected_count || 0;
+              }
+            }
           });
 
           // Add jobs that exist in backend but are missing locally
           liveJobs.forEach((liveJob) => {
             const exists = storedJobs.some((storedJob) => liveJob.id === storedJob.db_job_id || liveJob.id === storedJob.id);
             if (!exists) {
+              const bulk = bulkByDbId.get(liveJob.id);
+              const bulkResults = bulk?.results || {};
               storedJobs.push({
                 job_id: `job-${liveJob.id}`,
                 db_job_id: liveJob.id,
                 id: liveJob.id,
                 title: liveJob.title,
+                description: liveJob.description,
+                min_experience: liveJob.min_experience,
+                required_skills: liveJob.required_skills || [],
                 created_at: liveJob.created_at || new Date().toISOString(),
                 is_active: liveJob.is_active,
-                total_processed: 0,
-                shortlisted_count: 0,
-                review_count: 0,
-                rejected_count: 0,
+                tracking_id: bulk?.id || null,
+                bulk_status: bulk?.status || null,
+                total_resumes: bulk?.total_resumes || 0,
+                total_processed: bulkResults.total_processed || 0,
+                shortlisted_count: bulkResults.shortlisted_count || 0,
+                review_count: bulkResults.review_count || 0,
+                rejected_count: bulkResults.rejected_count || 0,
                 views: liveJob.views || 0,
                 application_count: liveJob.application_count || 0,
                 results: {
-                  total_processed: 0,
-                  shortlisted_count: 0,
-                  review_count: 0,
-                  rejected_count: 0,
+                  total_processed: bulkResults.total_processed || 0,
+                  shortlisted_count: bulkResults.shortlisted_count || 0,
+                  review_count: bulkResults.review_count || 0,
+                  rejected_count: bulkResults.rejected_count || 0,
                   all_candidates: [],
                   criteria: {
                     min_experience: liveJob.min_experience,
@@ -709,9 +930,10 @@
         
         // Refresh analytics from API before rendering
         refreshJobAnalytics().then(() => {
-          renderMetrics();
-          renderSessionsTable();
-          lucide.createIcons();
+          renderMetrics().then(() => {
+            renderSessionsTable();
+            lucide.createIcons();
+          });
         });
       }
 
@@ -747,6 +969,18 @@
         if (candidateScoreSelect) candidateScoreSelect.value = "all";
         if (candidateSkillInput) candidateSkillInput.value = "";
         updateFilterTabs();
+
+        // Reset to list view
+        pipelineViewMode = "list";
+        const listViewEl = document.getElementById("pipeline-list-view");
+        const kanbanViewEl = document.getElementById("pipeline-kanban-view");
+        if (listViewEl) listViewEl.style.display = "";
+        if (kanbanViewEl) kanbanViewEl.style.display = "none";
+        document.querySelectorAll("#pipeline-view-toggle button").forEach(btn => {
+          const isActive = btn.dataset.view === "list";
+          btn.className = `view-toggle-btn ${isActive ? "view-toggle-active" : "view-toggle-inactive"}`;
+        });
+
         renderPipelineStats(job);
         renderCriteriaBanner(job);
         
@@ -860,20 +1094,37 @@
       // ==========================================
       // METRICS CARDS
       // ==========================================
-      function renderMetrics() {
-        const jobs = getStoredJobs();
-        const totalSessions    = jobs.length;
-        const totalScreened    = jobs.reduce((s, j) => s + (j.total_processed || 0), 0);
-        const totalShortlisted = jobs.reduce((s, j) => s + (j.shortlisted_count || 0), 0);
-        const totalSaved       = jobs.reduce((s, j) => s + (j.knocked_out || 0), 0) * 2;
-        const shortlistRate    = totalScreened > 0 ? Math.round((totalShortlisted / totalScreened) * 100) : 0;
-
-        const cards = [
-          { label: "Screening Sessions",   value: totalSessions.toLocaleString(),    sub: "All time",                         icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
-          { label: "Candidates Screened",  value: totalScreened.toLocaleString(),    sub: "Total resumes processed",          icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
-          { label: "Shortlisted",          value: totalShortlisted.toLocaleString(), sub: `${shortlistRate}% shortlist rate`, icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
-          { label: "API Calls Saved",      value: totalSaved.toLocaleString(),       sub: "Via knockout pre-filter",          icon: "trending-down",iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
-        ];
+      async function renderMetrics() {
+        let cards;
+        try {
+          const res = await Auth.authFetch("/jobs/dashboard/stats");
+          if (res.ok) {
+            const s = await res.json();
+            const shortlistRate = s.total_applicants > 0 ? Math.round((s.shortlisted_applicants / s.total_applicants) * 100) : 0;
+            cards = [
+              { label: "Active Job Postings",  value: s.active_jobs.toLocaleString(),             sub: `${s.total_jobs} total job${s.total_jobs !== 1 ? "s" : ""}`,  icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
+              { label: "Candidates Screened",  value: s.total_applicants.toLocaleString(),         sub: "Total resumes in pipeline",                                     icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
+              { label: "Shortlisted",          value: s.shortlisted_applicants.toLocaleString(),   sub: `${shortlistRate}% shortlist rate`,                              icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
+              { label: "Pending Review",       value: s.pending_review.toLocaleString(),           sub: "Awaiting recruiter decision",                                   icon: "clock",        iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
+            ];
+          } else {
+            throw new Error("API unavailable");
+          }
+        } catch {
+          // Fallback: compute from localStorage
+          const jobs = getStoredJobs();
+          const totalSessions    = jobs.length;
+          const totalScreened    = jobs.reduce((s, j) => s + (j.total_processed || 0), 0);
+          const totalShortlisted = jobs.reduce((s, j) => s + (j.shortlisted_count || 0), 0);
+          const totalSaved       = jobs.reduce((s, j) => s + (j.knocked_out || 0), 0) * 2;
+          const shortlistRate    = totalScreened > 0 ? Math.round((totalShortlisted / totalScreened) * 100) : 0;
+          cards = [
+            { label: "Screening Sessions",   value: totalSessions.toLocaleString(),    sub: "All time",                         icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
+            { label: "Candidates Screened",  value: totalScreened.toLocaleString(),    sub: "Total resumes processed",          icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
+            { label: "Shortlisted",          value: totalShortlisted.toLocaleString(), sub: `${shortlistRate}% shortlist rate`, icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
+            { label: "API Calls Saved",      value: totalSaved.toLocaleString(),       sub: "Via knockout pre-filter",          icon: "trending-down",iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
+          ];
+        }
 
         document.getElementById("metrics-grid").innerHTML = cards.map(c => `
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-5 hover:shadow-md transition-shadow duration-200">
@@ -1000,11 +1251,29 @@
                     <td class="px-4 py-4 text-right">
                       <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20">${job.rejected_count || 0}</span>
                     </td>
-                    <td class="px-6 py-4 text-right">
-                      <button class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all">
-                        View Pipeline
-                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                      </button>
+                    <td class="px-6 py-4 text-right" onclick="event.stopPropagation()">
+                      <div class="flex items-center justify-end gap-2 flex-wrap">
+                        <button class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all"
+                          onclick="showPipelineByKey(${JSON.stringify(getJobKey(job))})">
+                          View Pipeline
+                          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
+                          onclick="openEditJobModal(${job.db_job_id || job.id}, event)" title="Edit job details">
+                          <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                          Edit
+                        </button>
+                        <button class="inline-flex items-center gap-1.5 text-xs font-medium ${job.is_active !== false ? 'text-amber-600 hover:text-amber-800 border-amber-200 hover:bg-amber-50' : 'text-emerald-600 hover:text-emerald-800 border-emerald-200 hover:bg-emerald-50'} border bg-white px-3 py-1.5 rounded-lg transition-all"
+                          onclick="toggleJobStatus(${job.db_job_id || job.id}, event)" title="${job.is_active !== false ? 'Deactivate job' : 'Activate job'}">
+                          <i data-lucide="${job.is_active !== false ? 'pause-circle' : 'play-circle'}" class="w-3.5 h-3.5"></i>
+                          ${job.is_active !== false ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button class="inline-flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-700 border border-red-200 bg-white hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all"
+                          onclick="deleteJob(${job.db_job_id || job.id}, ${escapeHtml(JSON.stringify(job.title || 'Untitled'))}, event)">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>`).join("")}
               </tbody>
@@ -1205,6 +1474,10 @@
             <table class="w-full min-w-[900px]">
               <thead>
                 <tr class="border-b border-slate-100 bg-slate-50/80">
+                  <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide w-8">
+                    <input type="checkbox" id="select-all-candidates" onchange="toggleSelectAll(this.checked)"
+                      class="rounded border-slate-300 text-slate-900 focus:ring-slate-400 cursor-pointer" />
+                  </th>
                   <th class="text-left text-xs font-semibold text-slate-500 px-6 py-3 uppercase tracking-wide">Candidate</th>
                   <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Exp.</th>
                   <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Status</th>
@@ -1262,17 +1535,23 @@
 
         const aiScoresHtml = bd
           ? `<div class="flex flex-col gap-1.5 min-w-[160px]">
-              ${miniBar("Skill",  bd.skill_depth,  40, "bg-blue-500")}
-              ${miniBar("JD",     bd.jd_requirements || 0,  30, "bg-violet-500")}
-              ${miniBar("Exp",    bd.experience,   20, "bg-indigo-400")}
-              ${miniBar("Impact", bd.impact,       10, "bg-amber-400")}
+              ${miniBar("Skills", bd.skills || 0, 40, "bg-blue-500")}
+              ${miniBar("Exp",    bd.experience || 0, 40, "bg-indigo-400")}
+              ${miniBar("Edu",    bd.education || 0, 20, "bg-amber-400")}
             </div>`
           : `<span class="text-xs text-slate-300 italic">knocked out</span>`;
 
         return `
-          <tr class="candidate-row border-b border-slate-50 last:border-0">
+          <tr class="candidate-row border-b border-slate-50 last:border-0" ${c.id ? `onclick="openCandidateDetail(${c.id})" style="cursor:pointer"` : ''}>
+            <td class="px-4 py-4" onclick="event.stopPropagation()">
+              ${c.id ? `<input type="checkbox" class="candidate-checkbox rounded border-slate-300 text-slate-900 focus:ring-slate-400 cursor-pointer"
+                data-id="${c.id}" onchange="updateBulkActionBar()" />` : ""}
+            </td>
             <td class="px-6 py-4 min-w-[200px]">
-              <div class="font-semibold text-slate-900 text-sm">${escapeHtml(c.name || "Unknown")}</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="font-semibold text-slate-900 text-sm">${escapeHtml(c.name || "Unknown")}</div>
+                ${c.cover_letter ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-900/60 text-violet-300 ring-1 ring-inset ring-violet-500/30">CL</span>` : ""}
+              </div>
               <div class="text-xs text-slate-400 mt-0.5">${escapeHtml(c.email || "")}</div>
               ${skills.length > 0 ? `<div class="flex flex-wrap items-center gap-1 mt-2">${skillTags}${moreSkills}</div>` : ""}
             </td>
@@ -1288,17 +1567,26 @@
                 </div>
                 <span class="text-sm font-bold font-mono ${scoreColor} w-8 text-right flex-shrink-0">${score}</span>
               </div>
+              ${getStageBadgeHtml(c.pipeline_stage)}
             </td>
             <td class="px-4 py-4">${aiScoresHtml}</td>
             <td class="px-6 py-4 max-w-xs"><p class="text-xs text-slate-500 leading-relaxed line-clamp-3">${escapeHtml(c.summary || "")}</p></td>
-            <td class="px-4 py-4 text-center">
-              <button 
-                onclick="downloadResume(${c.id})"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                title="Download Resume">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                Resume
-              </button>
+            <td class="px-4 py-4 text-center" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-center gap-1.5">
+                <button
+                  onclick="downloadResume(${c.id})"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                  title="Download Resume">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  Resume
+                </button>
+                ${c.id ? `<button
+                  onclick="deleteCandidate(${c.id}, ${JSON.stringify(escapeHtml(c.name || 'this candidate'))})"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                  title="Delete candidate">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>` : ""}
+              </div>
             </td>
           </tr>`;
       }
@@ -1331,12 +1619,13 @@
 
       function openJobModal() {
         document.getElementById("job-modal-overlay").style.display = "flex";
+        initJobWizard("create");
         lucide.createIcons();
       }
 
       function closeJobModal() {
         document.getElementById("job-modal-overlay").style.display = "none";
-        document.getElementById("createJobForm").reset();
+        resetJobWizard("create");
       }
 
       // ==========================================
@@ -1580,106 +1869,570 @@
       }
 
       // ==========================================
-      // CREATE JOB POSTING FORM
+      // CREATE / EDIT JOB WIZARD
       // ==========================================
-      document.getElementById("createJobForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById("createJobBtn");
-        btn.disabled = true;
-        btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Creating...';
+      const JOB_DEPARTMENTS = ["Engineering", "Product", "Design", "Marketing", "Sales", "HR", "Finance", "Operations", "Legal", "Other"];
+      const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Freelance"];
+      const WORK_LOCATIONS = ["Remote", "Hybrid", "On-site"];
+      const EDUCATION_OPTIONS = ["None", "High School", "Associate's", "Bachelor's", "Master's", "PhD", "Equivalent experience accepted"];
+      const BENEFIT_OPTIONS = ["Health Insurance", "Dental", "Vision", "401k", "Unlimited PTO", "Home Office Stipend", "Learning Budget", "Gym Membership", "Parental Leave", "Stock Options"];
+      const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "CAD", "AUD", "INR"];
+      const PAY_FREQUENCY_OPTIONS = ["Annual", "Monthly", "Hourly"];
+      const VISIBILITY_OPTIONS = [
+        { value: "Public", desc: "Listed on your careers portal and available to all candidates." },
+        { value: "Unlisted", desc: "Available only via direct application link." },
+        { value: "Internal", desc: "Visible only to internal team members." },
+      ];
 
-        const title = document.getElementById("newJobTitle").value.trim();
-        const description = document.getElementById("newJobDescription").value.trim();
-        const minExperience = parseFloat(document.getElementById("newJobExperience").value);
-        const skillsStr = document.getElementById("newJobSkills").value.trim();
-        const skills = skillsStr.split(",").map(s => s.trim()).filter(Boolean);
+      const jobWizardState = { create: null, edit: null };
 
-        // Build form config
-        const formConfig = {};
-        if (document.getElementById("requireLinkedIn").checked) {
-          formConfig.require_linkedin = "required";
+      function _jobWizardDefaults() {
+        return {
+          title: "",
+          department: "",
+          job_type: "",
+          work_location_type: "",
+          office_location: "",
+          openings: 1,
+          status: "Draft",
+          required_experience: "",
+          required_education: "None",
+          visa_sponsorship: "No",
+          about_role: "",
+          responsibilities: "",
+          looking_for: "",
+          salary_min: "",
+          salary_max: "",
+          currency: "USD",
+          pay_frequency: "Annual",
+          show_salary: true,
+          equity_bonus: "",
+          require_cover_letter: false,
+          require_portfolio: false,
+          require_linkedin: false,
+          hiring_manager: "",
+          target_hire_date: "",
+          application_deadline: "",
+          visibility: "Public",
+          benefits: [],
+          custom_questions: [],
+          skills: [],
+        };
+      }
+
+      function resetJobWizard(mode) {
+        jobWizardState[mode] = null;
+        const root = document.getElementById(mode === "create" ? "create-job-form-root" : "edit-job-form-root");
+        if (root) root.innerHTML = "";
+      }
+
+      function initJobWizard(mode, seed = {}, jobId = null) {
+        const base = _jobWizardDefaults();
+        const merged = { ...base, ...seed };
+        merged.benefits = Array.isArray(merged.benefits) ? [...merged.benefits] : [];
+        merged.custom_questions = Array.isArray(merged.custom_questions) ? [...merged.custom_questions] : [];
+        merged.skills = Array.isArray(merged.skills) ? [...merged.skills] : [];
+        jobWizardState[mode] = { mode, step: 1, jobId, errors: {}, loading: false, data: merged };
+        renderJobWizard(mode);
+      }
+
+      function jobWizardSet(mode, field, value, rerender = false) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        state.data[field] = value;
+        delete state.errors[field];
+        if (rerender) renderJobWizard(mode);
+      }
+
+      function jobWizardToggleBenefit(mode, label, checked) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        const set = new Set(state.data.benefits || []);
+        if (checked) set.add(label); else set.delete(label);
+        state.data.benefits = Array.from(set);
+      }
+
+      function jobWizardAddOtherBenefit(mode) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        const input = document.getElementById(`${mode}-benefit-other`);
+        const value = (input?.value || "").trim();
+        if (!value) return;
+        if (!state.data.benefits.includes(value)) state.data.benefits.push(value);
+        if (input) input.value = "";
+        renderJobWizard(mode);
+      }
+
+      function jobWizardRemoveBenefit(mode, label) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        state.data.benefits = (state.data.benefits || []).filter((b) => b !== label);
+        renderJobWizard(mode);
+      }
+
+      function jobWizardAddSkill(mode, event) {
+        if (event.key !== "Enter" && event.key !== ",") return;
+        event.preventDefault();
+        const state = jobWizardState[mode];
+        if (!state) return;
+        const input = document.getElementById(`${mode}-skill-input`);
+        const value = (input?.value || "").trim().replace(/,$/, "");
+        if (!value) return;
+        const exists = (state.data.skills || []).some((s) => s.name.toLowerCase() === value.toLowerCase());
+        if (!exists) state.data.skills.push({ name: value, type: "required" });
+        if (input) input.value = "";
+        delete state.errors.required_skills;
+        renderJobWizard(mode);
+      }
+
+      function jobWizardToggleSkillType(mode, index) {
+        const state = jobWizardState[mode];
+        if (!state?.data.skills?.[index]) return;
+        state.data.skills[index].type = state.data.skills[index].type === "required" ? "nice" : "required";
+        renderJobWizard(mode);
+      }
+
+      function jobWizardRemoveSkill(mode, index) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        state.data.skills.splice(index, 1);
+        renderJobWizard(mode);
+      }
+
+      function jobWizardAddQuestion(mode) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        if ((state.data.custom_questions || []).length >= 5) return;
+        state.data.custom_questions.push("");
+        renderJobWizard(mode);
+      }
+
+      function jobWizardUpdateQuestion(mode, index, value) {
+        const state = jobWizardState[mode];
+        if (!state?.data.custom_questions?.length) return;
+        state.data.custom_questions[index] = value;
+        delete state.errors.custom_questions;
+      }
+
+      function jobWizardRemoveQuestion(mode, index) {
+        const state = jobWizardState[mode];
+        if (!state?.data.custom_questions?.length) return;
+        state.data.custom_questions.splice(index, 1);
+        renderJobWizard(mode);
+      }
+
+      function _futureDateOnly(dateStr) {
+        if (!dateStr) return true;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dateValue = new Date(`${dateStr}T00:00:00`);
+        return dateValue > today;
+      }
+
+      function validateJobWizardStep(mode, step, setErrors = true, draftMode = false) {
+        const state = jobWizardState[mode];
+        if (!state) return false;
+        const d = state.data;
+        const errors = { ...state.errors };
+
+        const requiredSkillsCount = (d.skills || []).filter((s) => s.type === "required").length;
+
+        if (step === 1) {
+          if (!draftMode && !d.title?.trim()) errors.title = "Job title is required.";
+          else if (d.title?.trim() && d.title.trim().length > 100) errors.title = "Job title cannot exceed 100 characters.";
+          if (!Number.isFinite(Number(d.openings)) || Number(d.openings) < 1) errors.openings = "Number of openings must be at least 1.";
         }
-        if (document.getElementById("requirePortfolio").checked) {
-          formConfig.require_portfolio = "required";
+
+        if (step === 2) {
+          if (!draftMode && (d.required_experience === "" || d.required_experience === null || Number.isNaN(Number(d.required_experience)))) {
+            errors.required_experience = "Minimum years of experience is required.";
+          }
+          if (!draftMode && d.status === "Live" && requiredSkillsCount < 1) {
+            errors.required_skills = "At least 1 Required skill is needed before posting Live.";
+          }
         }
-        const customQuestionsText = document.getElementById("customQuestions").value.trim();
-        if (customQuestionsText) {
-          formConfig.custom_questions = customQuestionsText.split("\n").map(q => q.trim()).filter(Boolean);
+
+        if (step === 3) {
+          if (!draftMode && !d.about_role?.trim()) errors.about_role = "About the role is required.";
+          else if (!draftMode && d.about_role.trim().length < 100) errors.about_role = "About the role must be at least 100 characters.";
+          if (!draftMode && !d.responsibilities?.trim()) errors.responsibilities = "Responsibilities are required.";
+          if (!draftMode && !d.looking_for?.trim()) errors.looking_for = "What we're looking for is required.";
+
+          const minSalary = d.salary_min === "" ? null : Number(d.salary_min);
+          const maxSalary = d.salary_max === "" ? null : Number(d.salary_max);
+          if (minSalary !== null && maxSalary !== null && maxSalary <= minSalary) {
+            errors.salary_max = "Salary max must be greater than salary min.";
+          }
         }
+
+        if (step === 4) {
+          const questions = (d.custom_questions || []).filter((q) => (q || "").trim().length > 0);
+          if (questions.length > 5) errors.custom_questions = "Custom questions cannot exceed 5 items.";
+          if (questions.some((q) => q.trim().length > 200)) errors.custom_questions = "Each custom question must be 200 characters or fewer.";
+          if (!_futureDateOnly(d.application_deadline)) errors.application_deadline = "Application deadline must be a future date.";
+          if (!_futureDateOnly(d.target_hire_date)) errors.target_hire_date = "Target hire date must be a future date.";
+        }
+
+        if (setErrors) {
+          state.errors = errors;
+          renderJobWizard(mode);
+        }
+        return Object.keys(errors).length === 0;
+      }
+
+      function jobWizardNext(mode) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        const ok = validateJobWizardStep(mode, state.step, true);
+        if (!ok) return;
+        if (state.step < 4) state.step += 1;
+        renderJobWizard(mode);
+      }
+
+      function jobWizardBack(mode) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        if (state.step > 1) state.step -= 1;
+        renderJobWizard(mode);
+      }
+
+      function _composeDescription(d) {
+        return [
+          `About the Role:\n${(d.about_role || "").trim()}`,
+          `Responsibilities:\n${(d.responsibilities || "").trim()}`,
+          `What We're Looking For:\n${(d.looking_for || "").trim()}`,
+        ].join("\n\n").trim();
+      }
+
+      function _buildWizardPayload(mode, forceDraft = false) {
+        const state = jobWizardState[mode];
+        const d = state.data;
+        const requiredSkills = (d.skills || []).filter((s) => s.type === "required").map((s) => s.name.trim()).filter(Boolean);
+        const niceSkills = (d.skills || []).filter((s) => s.type === "nice").map((s) => s.name.trim()).filter(Boolean);
+        const minExp = Number(d.required_experience);
+
+        const title = (d.title || "").trim() || (forceDraft ? "Untitled Draft Job" : "");
+        const description = _composeDescription(d) || (forceDraft ? "Draft job description." : "");
 
         const payload = {
           title,
           description,
-          min_experience: minExperience,
-          required_skills: skills
+          min_experience: Number.isFinite(minExp) ? minExp : (forceDraft ? 0 : null),
+          required_skills: requiredSkills.length ? requiredSkills : (forceDraft ? ["TBD"] : []),
+          required_experience: Number.isFinite(minExp) ? minExp : null,
+          required_education: d.required_education || "None",
+          visa_sponsorship: (d.visa_sponsorship || "No") === "Yes",
+          department: d.department || null,
+          job_type: d.job_type || null,
+          work_location_type: d.work_location_type || null,
+          office_location: d.office_location?.trim() || null,
+          openings: Number(d.openings) || 1,
+          status: forceDraft ? "Draft" : (d.status || "Draft"),
+          salary_min: d.salary_min === "" ? null : Number(d.salary_min),
+          salary_max: d.salary_max === "" ? null : Number(d.salary_max),
+          currency: d.currency || "USD",
+          pay_frequency: d.pay_frequency || "Annual",
+          show_salary: !!d.show_salary,
+          equity_bonus: d.equity_bonus?.trim() || null,
+          nice_to_have_skills: niceSkills.length ? niceSkills : null,
+          benefits: (d.benefits || []).length ? d.benefits : null,
+          require_cover_letter: !!d.require_cover_letter,
+          require_portfolio: !!d.require_portfolio,
+          require_linkedin: !!d.require_linkedin,
+          custom_questions: (d.custom_questions || []).map((q) => (q || "").trim()).filter(Boolean),
+          hiring_manager: d.hiring_manager?.trim() || null,
+          target_hire_date: d.target_hire_date || null,
+          application_deadline: d.application_deadline || null,
+          visibility: d.visibility || "Public",
         };
 
+        if (payload.custom_questions.length === 0) payload.custom_questions = null;
+        return payload;
+      }
+
+      async function _submitWizard(mode, { forceDraft = false } = {}) {
+        const state = jobWizardState[mode];
+        if (!state || state.loading) return;
+
+        const validateSteps = [1, 2, 3, 4];
+        state.errors = {};
+        for (const step of validateSteps) {
+          validateJobWizardStep(mode, step, false, forceDraft);
+        }
+        if (Object.keys(state.errors).length) {
+          if (!forceDraft) state.step = Math.min(...validateSteps.filter((s) => Object.keys(state.errors).some((k) => {
+            if (s === 1) return ["title", "openings"].includes(k);
+            if (s === 2) return ["required_experience", "required_skills"].includes(k);
+            if (s === 3) return ["about_role", "responsibilities", "looking_for", "salary_max"].includes(k);
+            return ["custom_questions", "application_deadline", "target_hire_date"].includes(k);
+          })));
+          renderJobWizard(mode);
+          return;
+        }
+
+        const isLiveSubmit = !forceDraft && (state.data.status === "Live");
+        if (isLiveSubmit) {
+          const confirmed = await showConfirmDialog(
+            "Post job as Live?",
+            "This will make the job publicly visible and trigger AI standardization of your job description. Continue?",
+            "Continue",
+            "emerald"
+          );
+          if (!confirmed) return;
+        }
+
+        const payload = _buildWizardPayload(mode, forceDraft);
+        state.loading = true;
+        renderJobWizard(mode);
+
         try {
-          // Create the job
-          const response = await Auth.authFetch("/jobs/", {
-            method: "POST",
+          const targetId = mode === "edit" ? state.jobId : state.jobId;
+          const isUpdate = !!targetId;
+          const endpoint = isUpdate ? `/jobs/${targetId}` : "/jobs/";
+          const method = isUpdate ? "PUT" : "POST";
+          const res = await Auth.authFetch(endpoint, {
+            method,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
           });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(body.detail || "Failed to save job");
 
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.detail || "Failed to create job");
+          state.jobId = body.id;
+          if (mode === "create") {
+            showToast(forceDraft ? "Draft saved" : "Job saved successfully", "success");
+          } else {
+            showToast(forceDraft ? "Draft update saved" : "Job updated successfully", "success");
           }
 
-          const job = await response.json();
+          await refreshJobAnalytics();
+          renderSessionsTable();
 
-          // If form config is provided, update it
-          if (Object.keys(formConfig).length > 0) {
-            await Auth.authFetch(`/jobs/${job.id}/form-config`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(formConfig)
-            });
+          if (!forceDraft) {
+            if (mode === "create") closeJobModal(); else closeEditJobModal();
+            showPipelineByKey(String(body.id));
+          } else {
+            renderJobWizard(mode);
           }
-
-          // Save to local storage
-          const storedJob = {
-            job_id: `job-${job.id}`,
-            db_job_id: job.id,
-            id: job.id,
-            title: job.title,
-            created_at: new Date().toISOString(),
-            total_processed: 0,
-            shortlisted_count: 0,
-            review_count: 0,
-            rejected_count: 0,
-            views: 0,
-            application_count: 0,
-            results: {
-              total_processed: 0,
-              shortlisted_count: 0,
-              review_count: 0,
-              rejected_count: 0,
-              criteria: {
-                min_experience: minExperience,
-                required_skills: skills
-              }
-            }
-          };
-          saveJob(storedJob);
-
-          // Close modal and show success
-          closeJobModal();
-          alert(`✅ Job created! You can now copy the application link from the dashboard.`);
-          
-          // Refresh view
-          showDashboard();
           lucide.createIcons();
-
-        } catch (error) {
-          alert("Error: " + error.message);
+        } catch (err) {
+          showToast(err.message || "Failed to save job", "error");
         } finally {
-          btn.disabled = false;
-          btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Create Job Posting';
+          state.loading = false;
+          renderJobWizard(mode);
           lucide.createIcons();
         }
-      });
+      }
+
+      async function jobWizardSaveDraft(mode) {
+        await _submitWizard(mode, { forceDraft: true });
+      }
+
+      async function jobWizardSubmit(mode) {
+        await _submitWizard(mode, { forceDraft: false });
+      }
+
+      function _wizardError(state, key) {
+        return state.errors[key] ? `<p class="text-xs text-red-400 mt-1.5">${escapeHtml(state.errors[key])}</p>` : "";
+      }
+
+      function _wizardPills(mode, field, options) {
+        const state = jobWizardState[mode];
+        return options.map((opt) => {
+          const active = state.data[field] === opt;
+          return `<button type="button" onclick="jobWizardSet('${mode}','${field}','${escapeHtml(opt)}',true)" class="px-3 py-1.5 text-xs font-semibold rounded-full border transition ${active ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}">${escapeHtml(opt)}</button>`;
+        }).join("");
+      }
+
+      function _wizardStepIndicator(mode) {
+        const state = jobWizardState[mode];
+        const steps = ["Basics", "Requirements", "Description", "Settings"];
+        return `<div class="grid grid-cols-4 gap-2 mb-5">${steps.map((label, idx) => {
+          const stepNum = idx + 1;
+          const completed = stepNum < state.step;
+          const active = stepNum === state.step;
+          return `<div class="rounded-lg border px-2 py-2 text-center ${completed ? "border-emerald-400 bg-emerald-50" : active ? "border-slate-400 bg-slate-100" : "border-slate-200 bg-white"}"><div class="text-[10px] font-semibold ${completed ? "text-emerald-700" : active ? "text-slate-700" : "text-slate-400"}">Step ${stepNum}</div><div class="text-xs font-medium ${completed || active ? "text-slate-800" : "text-slate-500"}">${label}</div></div>`;
+        }).join("")}</div>`;
+      }
+
+      function renderJobWizard(mode) {
+        const state = jobWizardState[mode];
+        if (!state) return;
+        const d = state.data;
+        const root = document.getElementById(mode === "create" ? "create-job-form-root" : "edit-job-form-root");
+        if (!root) return;
+        const requiredSkills = (d.skills || []).filter((s) => s.type === "required");
+        const submitLabel = d.status === "Live" ? "Post Job" : "Save Draft";
+
+        root.innerHTML = `
+          ${_wizardStepIndicator(mode)}
+          ${state.step === 1 ? `
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Title <span class="text-red-400">*</span></label>
+                <input type="text" maxlength="100" value="${escapeHtml(d.title || "")}" oninput="jobWizardSet('${mode}','title',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent" />
+                ${_wizardError(state, "title")}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department</label>
+                  <select onchange="jobWizardSet('${mode}','department',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5">
+                    <option value="">Select department</option>
+                    ${JOB_DEPARTMENTS.map((v) => `<option ${d.department === v ? "selected" : ""}>${v}</option>`).join("")}
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5">Number of Openings</label>
+                  <input type="number" min="1" value="${escapeHtml(String(d.openings ?? 1))}" oninput="jobWizardSet('${mode}','openings',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />
+                  ${_wizardError(state, "openings")}
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Type</label>
+                <div class="flex flex-wrap gap-2">${_wizardPills(mode, "job_type", JOB_TYPES)}</div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Work Location Type</label>
+                <div class="flex flex-wrap gap-2">${_wizardPills(mode, "work_location_type", WORK_LOCATIONS)}</div>
+              </div>
+              ${(d.work_location_type === "Hybrid" || d.work_location_type === "On-site") ? `
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5">Office Location</label>
+                  <input type="text" value="${escapeHtml(d.office_location || "")}" oninput="jobWizardSet('${mode}','office_location',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />
+                </div>` : ""}
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Status</label>
+                <div class="inline-flex items-center bg-slate-100 rounded-lg p-1 gap-1">
+                  <button type="button" onclick="jobWizardSet('${mode}','status','Draft',true)" class="px-3 py-1.5 text-xs font-semibold rounded-md ${d.status === "Draft" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}">Draft</button>
+                  <button type="button" onclick="jobWizardSet('${mode}','status','Live',true)" class="px-3 py-1.5 text-xs font-semibold rounded-md ${d.status === "Live" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}">Live</button>
+                </div>
+              </div>
+            </div>
+          ` : ""}
+
+          ${state.step === 2 ? `
+            <div class="space-y-4">
+              <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                These fields directly control how candidates are scored. Experience and Skills are each worth 40 points. Education is worth 20 points.
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Minimum Years of Experience <span class="text-red-400">*</span></label>
+                <input type="number" min="0" step="0.5" value="${escapeHtml(String(d.required_experience ?? ""))}" oninput="jobWizardSet('${mode}','required_experience',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />
+                ${_wizardError(state, "required_experience")}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Required Skills</label>
+                <input id="${mode}-skill-input" type="text" onkeydown="jobWizardAddSkill('${mode}',event)" placeholder="Type a skill and press Enter or comma" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />
+                <div class="mt-2 flex flex-wrap gap-2">
+                  ${(d.skills || []).map((s, idx) => `
+                    <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs">
+                      <span class="font-medium">${escapeHtml(s.name)}</span>
+                      <button type="button" onclick="jobWizardToggleSkillType('${mode}',${idx})" class="rounded px-1.5 py-0.5 ${s.type === "required" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700"}">${s.type === "required" ? "Required" : "Nice"}</button>
+                      <button type="button" onclick="jobWizardRemoveSkill('${mode}',${idx})" class="text-red-500">×</button>
+                    </span>`).join("")}
+                </div>
+                ${_wizardError(state, "required_skills")}
+                ${d.status === "Live" ? `<p class="text-xs text-slate-400 mt-1.5">Live jobs require at least 1 Required skill.</p>` : ""}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5">Education Requirement</label>
+                  <select onchange="jobWizardSet('${mode}','required_education',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5">
+                    ${EDUCATION_OPTIONS.map((v) => `<option ${d.required_education === v ? "selected" : ""}>${v}</option>`).join("")}
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1.5">Visa Sponsorship Available</label>
+                  <div class="inline-flex items-center bg-slate-100 rounded-lg p-1 gap-1">
+                    <button type="button" onclick="jobWizardSet('${mode}','visa_sponsorship','Yes',true)" class="px-3 py-1.5 text-xs font-semibold rounded-md ${d.visa_sponsorship === "Yes" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}">Yes</button>
+                    <button type="button" onclick="jobWizardSet('${mode}','visa_sponsorship','No',true)" class="px-3 py-1.5 text-xs font-semibold rounded-md ${d.visa_sponsorship !== "Yes" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}">No</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ` : ""}
+
+          ${state.step === 3 ? `
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">About the Role <span class="text-red-400">*</span></label>
+                <textarea rows="4" oninput="jobWizardSet('${mode}','about_role',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 resize-none">${escapeHtml(d.about_role || "")}</textarea>
+                ${_wizardError(state, "about_role")}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Responsibilities <span class="text-red-400">*</span></label>
+                <textarea rows="3" oninput="jobWizardSet('${mode}','responsibilities',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 resize-none">${escapeHtml(d.responsibilities || "")}</textarea>
+                ${_wizardError(state, "responsibilities")}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">What We're Looking For <span class="text-red-400">*</span></label>
+                <textarea rows="3" oninput="jobWizardSet('${mode}','looking_for',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 resize-none">${escapeHtml(d.looking_for || "")}</textarea>
+                ${_wizardError(state, "looking_for")}
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-2">Benefits & Perks</label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  ${BENEFIT_OPTIONS.map((b) => `<label class="inline-flex items-center gap-2 text-xs"><input type="checkbox" ${d.benefits.includes(b) ? "checked" : ""} onchange="jobWizardToggleBenefit('${mode}','${escapeHtml(b)}',this.checked)" class="rounded border-slate-300" /><span>${escapeHtml(b)}</span></label>`).join("")}
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                  <input id="${mode}-benefit-other" type="text" placeholder="Other benefit" class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2" />
+                  <button type="button" onclick="jobWizardAddOtherBenefit('${mode}')" class="text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg">Add</button>
+                </div>
+                ${(d.benefits || []).filter((b) => !BENEFIT_OPTIONS.includes(b)).length ? `<div class="flex flex-wrap gap-2 mt-2">${d.benefits.filter((b) => !BENEFIT_OPTIONS.includes(b)).map((b) => `<span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs">${escapeHtml(b)}<button type="button" onclick="jobWizardRemoveBenefit('${mode}','${escapeHtml(b)}')" class="text-red-500">×</button></span>`).join("")}</div>` : ""}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Salary Min</label><input type="number" value="${escapeHtml(String(d.salary_min || ""))}" oninput="jobWizardSet('${mode}','salary_min',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" /></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Salary Max</label><input type="number" value="${escapeHtml(String(d.salary_max || ""))}" oninput="jobWizardSet('${mode}','salary_max',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />${_wizardError(state, "salary_max")}</div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Currency</label><select onchange="jobWizardSet('${mode}','currency',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5">${CURRENCY_OPTIONS.map((c) => `<option ${d.currency === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Pay Frequency</label><select onchange="jobWizardSet('${mode}','pay_frequency',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5">${PAY_FREQUENCY_OPTIONS.map((c) => `<option ${d.pay_frequency === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+              </div>
+              <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" ${d.show_salary ? "checked" : ""} onchange="jobWizardSet('${mode}','show_salary',this.checked)" class="rounded border-slate-300" /><span>Show salary to candidates</span></label>
+              <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Equity / Bonus notes</label><input type="text" value="${escapeHtml(d.equity_bonus || "")}" oninput="jobWizardSet('${mode}','equity_bonus',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" /></div>
+            </div>
+          ` : ""}
+
+          ${state.step === 4 ? `
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" ${d.require_cover_letter ? "checked" : ""} onchange="jobWizardSet('${mode}','require_cover_letter',this.checked)" class="rounded border-slate-300" /><span>Require Cover Letter</span></label>
+                <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" ${d.require_portfolio ? "checked" : ""} onchange="jobWizardSet('${mode}','require_portfolio',this.checked)" class="rounded border-slate-300" /><span>Require Portfolio/GitHub URL</span></label>
+                <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" ${d.require_linkedin ? "checked" : ""} onchange="jobWizardSet('${mode}','require_linkedin',this.checked)" class="rounded border-slate-300" /><span>Require LinkedIn URL</span></label>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1.5"><label class="block text-xs font-semibold text-slate-700">Custom Screening Questions</label><button type="button" onclick="jobWizardAddQuestion('${mode}')" class="text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg">Add Question</button></div>
+                ${(d.custom_questions || []).map((q, idx) => `<div class="flex items-start gap-2 mb-2"><input type="text" maxlength="200" value="${escapeHtml(q)}" oninput="jobWizardUpdateQuestion('${mode}',${idx},this.value)" class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2" /><button type="button" onclick="jobWizardRemoveQuestion('${mode}',${idx})" class="text-xs text-red-500">Remove</button></div>`).join("")}
+                ${_wizardError(state, "custom_questions")}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Hiring Manager</label><input type="text" value="${escapeHtml(d.hiring_manager || "")}" oninput="jobWizardSet('${mode}','hiring_manager',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" /></div>
+                <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Target Hire Date</label><input type="date" value="${escapeHtml(d.target_hire_date || "")}" onchange="jobWizardSet('${mode}','target_hire_date',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />${_wizardError(state, "target_hire_date")}</div>
+              </div>
+              <div><label class="block text-xs font-semibold text-slate-700 mb-1.5">Application Deadline <span class="text-slate-400" title="Job will automatically stop accepting applications on this date">ⓘ</span></label><input type="date" value="${escapeHtml(d.application_deadline || "")}" onchange="jobWizardSet('${mode}','application_deadline',this.value)" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5" />${_wizardError(state, "application_deadline")}</div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Visibility</label>
+                <div class="space-y-2">${VISIBILITY_OPTIONS.map((v) => `<label class="flex items-start gap-2 p-2 rounded-lg border ${d.visibility === v.value ? "border-slate-400 bg-slate-50" : "border-slate-200"}"><input type="radio" name="${mode}-visibility" ${d.visibility === v.value ? "checked" : ""} onchange="jobWizardSet('${mode}','visibility','${v.value}',true)" class="mt-0.5" /><span><span class="block text-sm font-medium">${v.value}</span><span class="block text-xs text-slate-500">${v.desc}</span></span></label>`).join("")}</div>
+              </div>
+            </div>
+          ` : ""}
+
+          <div class="flex flex-wrap justify-between items-center gap-2 pt-4 mt-4 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="${mode === "create" ? "closeJobModal()" : "closeEditJobModal()"}" class="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg">Cancel</button>
+              <button type="button" onclick="jobWizardSaveDraft('${mode}')" ${state.loading ? "disabled" : ""} class="text-sm font-medium text-slate-700 border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg disabled:opacity-50">Save as Draft</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="jobWizardBack('${mode}')" ${state.step === 1 || state.loading ? "disabled" : ""} class="text-sm font-medium text-slate-600 border border-slate-200 bg-white px-4 py-2 rounded-lg disabled:opacity-50">Back</button>
+              ${state.step < 4
+                ? `<button type="button" onclick="jobWizardNext('${mode}')" ${state.loading ? "disabled" : ""} class="text-sm font-semibold bg-slate-900 hover:bg-slate-700 text-white px-4 py-2 rounded-lg disabled:opacity-50">Next</button>`
+                : `<button type="button" onclick="jobWizardSubmit('${mode}')" ${state.loading ? "disabled" : ""} class="text-sm font-semibold bg-slate-900 hover:bg-slate-700 text-white px-4 py-2 rounded-lg disabled:opacity-50">${state.loading ? "Saving..." : submitLabel}</button>`}
+            </div>
+          </div>
+        `;
+
+        lucide.createIcons();
+      }
 
       // ==========================================
       // UTILITIES
@@ -1698,11 +2451,35 @@
       // ==========================================
       // PUBLIC CAREERS PORTAL LINK
       // ==========================================
+      async function deleteJob(jobId, jobTitle, event) {
+        if (event) event.stopPropagation();
+        if (!confirm(`Delete "${jobTitle}"?\n\nThis will permanently delete the job posting and ALL applicant data. This cannot be undone.`)) return;
+        try {
+          const res = await Auth.authFetch(`/jobs/${jobId}`, { method: "DELETE" });
+          if (res.ok || res.status === 204) {
+            // Remove from local storage
+            const key = _jobStorageKey();
+            const stored = JSON.parse(localStorage.getItem(key) || "[]");
+            const updated = stored.filter(j => (j.db_job_id || j.id) !== jobId);
+            localStorage.setItem(key, JSON.stringify(updated));
+            // If the deleted job is currently open in the pipeline view, return to dashboard
+            const openId = selectedJob ? (selectedJob.db_job_id || selectedJob.id) : null;
+            if (openId === jobId) selectedJob = null;
+            showDashboard();
+          } else {
+            const body = await res.json().catch(() => ({}));
+            alert(`Failed to delete job: ${body.detail || res.statusText}`);
+          }
+        } catch (err) {
+          alert(`Error deleting job: ${err.message}`);
+        }
+      }
+
       function copyApplicationLink(jobId, event) {
         event.stopPropagation();
         const baseUrl = window.location.origin;
         const applyLink = `${baseUrl}/apply/${jobId}`;
-        
+
         // Copy to clipboard
         navigator.clipboard.writeText(applyLink).then(() => {
           // Show success feedback
@@ -1712,7 +2489,7 @@
           lucide.createIcons();
           btn.classList.remove('text-blue-600', 'hover:text-blue-800');
           btn.classList.add('text-emerald-600');
-          
+
           setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.classList.remove('text-emerald-600');
@@ -1723,6 +2500,879 @@
           console.error('Failed to copy:', err);
           alert('Failed to copy link. Please try again.');
         });
+      }
+
+      // ==========================================
+      // PIPELINE CONSTANTS
+      // ==========================================
+      const PIPELINE_STAGES = ["Applied", "Recruiter Screen", "Hiring Manager Review", "Interview", "Offer", "Hired", "Rejected"];
+      const TERMINAL_STAGES = new Set(["Hired", "Rejected"]);
+      const STAGE_COLORS = {
+        "Applied": { bg: "bg-blue-900/50", text: "text-blue-300", ring: "ring-blue-500/30", dot: "#3b82f6" },
+        "Recruiter Screen": { bg: "bg-cyan-900/50", text: "text-cyan-300", ring: "ring-cyan-500/30", dot: "#06b6d4" },
+        "Hiring Manager Review": { bg: "bg-indigo-900/50", text: "text-indigo-300", ring: "ring-indigo-500/30", dot: "#6366f1" },
+        "Interview": { bg: "bg-violet-900/50", text: "text-violet-300", ring: "ring-violet-500/30", dot: "#8b5cf6" },
+        "Offer": { bg: "bg-amber-900/50", text: "text-amber-300", ring: "ring-amber-500/30", dot: "#f59e0b" },
+        "Hired": { bg: "bg-emerald-900/50", text: "text-emerald-300", ring: "ring-emerald-500/30", dot: "#10b981" },
+        "Rejected": { bg: "bg-red-900/50", text: "text-red-400", ring: "ring-red-500/30", dot: "#ef4444" },
+      };
+
+      // ==========================================
+      // TOAST NOTIFICATIONS
+      // ==========================================
+      function showToast(message, type = "info", duration = 4000) {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = "0";
+          toast.style.transform = "translateX(20px)";
+          setTimeout(() => toast.remove(), 300);
+        }, duration);
+      }
+
+      // ==========================================
+      // PIPELINE API
+      // ==========================================
+      async function fetchPipelineBoard(jobId) {
+        const response = await Auth.authFetch(`/api/jobs/${jobId}/pipeline`);
+        if (!response.ok) throw new Error("Failed to load pipeline board");
+        return response.json();
+      }
+
+      async function updateApplicantStage(jobId, applicantId, stage, note = null) {
+        const body = { stage };
+        if (note) body.note = note;
+        const response = await Auth.authFetch(`/api/jobs/${jobId}/applicants/${applicantId}/stage`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.detail || "Failed to update stage");
+        }
+        return response.json();
+      }
+
+      async function fetchStageHistory(jobId, applicantId) {
+        const response = await Auth.authFetch(`/api/jobs/${jobId}/applicants/${applicantId}/history`);
+        if (!response.ok) throw new Error("Failed to load stage history");
+        return response.json();
+      }
+
+      // ==========================================
+      // PIPELINE VIEW TOGGLE
+      // ==========================================
+      function setPipelineView(mode) {
+        pipelineViewMode = mode;
+        document.querySelectorAll("#pipeline-view-toggle button").forEach(btn => {
+          const isActive = btn.dataset.view === mode;
+          btn.className = `view-toggle-btn ${isActive ? "view-toggle-active" : "view-toggle-inactive"}`;
+        });
+        const listView = document.getElementById("pipeline-list-view");
+        const kanbanView = document.getElementById("pipeline-kanban-view");
+        if (mode === "list") {
+          listView.style.display = "";
+          kanbanView.style.display = "none";
+        } else {
+          listView.style.display = "none";
+          kanbanView.style.display = "";
+          loadKanbanBoard();
+        }
+        lucide.createIcons();
+      }
+
+      // ==========================================
+      // KANBAN BOARD
+      // ==========================================
+      let kanbanData = {};
+      let kanbanDragState = null;
+
+      async function loadKanbanBoard() {
+        const jobId = selectedJob?.db_job_id || selectedJob?.id;
+        if (!jobId) return;
+        const loading = document.getElementById("kanban-loading");
+        const board = document.getElementById("kanban-board");
+        loading.style.display = "flex";
+        board.innerHTML = "";
+        try {
+          kanbanData = await fetchPipelineBoard(jobId);
+          renderKanbanBoard();
+        } catch (err) {
+          board.innerHTML = `<div class="py-12 flex flex-col items-center gap-3 w-full">
+            <i data-lucide="alert-circle" class="w-8 h-8 text-red-400"></i>
+            <p class="text-red-400 text-sm">${escapeHtml(err.message)}</p>
+            <button onclick="loadKanbanBoard()" class="text-sm text-slate-400 hover:text-slate-200 underline">Retry</button>
+          </div>`;
+          lucide.createIcons();
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      function renderKanbanBoard() {
+        const board = document.getElementById("kanban-board");
+        board.innerHTML = PIPELINE_STAGES.map(stage => {
+          const candidates = kanbanData[stage] || [];
+          const isTerminal = TERMINAL_STAGES.has(stage);
+          const colors = STAGE_COLORS[stage];
+          return `
+            <div class="kanban-column ${isTerminal ? 'kanban-column-terminal' : ''}"
+                 data-stage="${escapeHtml(stage)}"
+                 ondragover="onKanbanDragOver(event)"
+                 ondragleave="onKanbanDragLeave(event)"
+                 ondrop="onKanbanDrop(event)">
+              <div class="kanban-column-header">
+                <span>${escapeHtml(stage)}</span>
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full ${colors.bg} ${colors.text} text-xs font-bold">${candidates.length}</span>
+              </div>
+              <div class="kanban-column-body">
+                ${candidates.length === 0
+                  ? '<div class="py-4 text-center text-xs text-slate-500 opacity-60">No candidates</div>'
+                  : candidates.map(c => renderKanbanCard(c, stage)).join("")}
+              </div>
+            </div>`;
+        }).join("");
+        lucide.createIcons();
+      }
+
+      function renderKanbanCard(candidate, stage) {
+        const score = candidate.match_score || 0;
+        const status = getCandidateStatus(candidate);
+        let scoreBadge;
+        if (status === "shortlisted") {
+          scoreBadge = `<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold bg-emerald-900/60 text-emerald-300 ring-1 ring-inset ring-emerald-500/30">${score}</span>`;
+        } else if (status === "review") {
+          scoreBadge = `<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold bg-amber-900/60 text-amber-300 ring-1 ring-inset ring-amber-500/30">${score}</span>`;
+        } else {
+          scoreBadge = `<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold bg-red-900/60 text-red-400 ring-1 ring-inset ring-red-500/30">${score}</span>`;
+        }
+        const timeInStage = candidate.stage_updated_at ? getTimeAgo(candidate.stage_updated_at) : "";
+        return `
+          <div class="kanban-card"
+               draggable="true"
+               data-applicant-id="${candidate.id}"
+               data-current-stage="${escapeHtml(stage)}"
+               ondragstart="onKanbanDragStart(event)"
+               ondragend="onKanbanDragEnd(event)"
+               onclick="openCandidateDetail(${candidate.id})">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div class="font-medium text-sm text-slate-200 truncate">${escapeHtml(candidate.name || "Unknown")}</div>
+              ${scoreBadge}
+            </div>
+            <div class="text-xs text-slate-500 truncate">${escapeHtml(candidate.email || "")}</div>
+            ${timeInStage ? `<div class="text-xs text-slate-600 mt-1.5 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>${timeInStage}</div>` : ""}
+          </div>`;
+      }
+
+      function getTimeAgo(dateStr) {
+        if (!dateStr) return "";
+        const now = new Date();
+        const then = new Date(dateStr);
+        const diffMs = now - then;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffMins < 1) return "just now";
+        if (diffMins < 60) return `${diffMins}m in stage`;
+        if (diffHrs < 24) return `${diffHrs}h in stage`;
+        if (diffDays === 1) return "1 day in stage";
+        return `${diffDays} days in stage`;
+      }
+
+      // ==========================================
+      // KANBAN DRAG & DROP
+      // ==========================================
+      function onKanbanDragStart(e) {
+        const card = e.target.closest(".kanban-card");
+        card.classList.add("dragging");
+        kanbanDragState = {
+          applicantId: parseInt(card.dataset.applicantId),
+          fromStage: card.dataset.currentStage,
+        };
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", card.dataset.applicantId);
+      }
+
+      function onKanbanDragEnd(e) {
+        const card = e.target.closest(".kanban-card");
+        if (card) card.classList.remove("dragging");
+        document.querySelectorAll(".kanban-column.drag-over").forEach(col => col.classList.remove("drag-over"));
+        kanbanDragState = null;
+      }
+
+      function onKanbanDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const col = e.target.closest(".kanban-column");
+        if (col && !col.classList.contains("drag-over")) {
+          document.querySelectorAll(".kanban-column.drag-over").forEach(c => c.classList.remove("drag-over"));
+          col.classList.add("drag-over");
+        }
+      }
+
+      function onKanbanDragLeave(e) {
+        const col = e.target.closest(".kanban-column");
+        if (col && !col.contains(e.relatedTarget)) {
+          col.classList.remove("drag-over");
+        }
+      }
+
+      async function onKanbanDrop(e) {
+        e.preventDefault();
+        const col = e.target.closest(".kanban-column");
+        if (!col || !kanbanDragState) return;
+        col.classList.remove("drag-over");
+        const toStage = col.dataset.stage;
+        const { applicantId, fromStage } = kanbanDragState;
+        kanbanDragState = null;
+        if (toStage === fromStage) return;
+        const jobId = selectedJob?.db_job_id || selectedJob?.id;
+        if (!jobId) return;
+
+        // Confirmation for terminal stages
+        if (TERMINAL_STAGES.has(toStage)) {
+          const confirmed = await showConfirmDialog(
+            `Move to ${toStage}?`,
+            `This will mark the candidate as <strong>${toStage}</strong>. This action cannot be undone.`,
+            toStage === "Hired" ? "Mark as Hired" : "Reject Candidate",
+            toStage === "Hired" ? "emerald" : "red"
+          );
+          if (!confirmed) return;
+        }
+
+        // Optimistic UI update
+        optimisticStageMove(applicantId, fromStage, toStage);
+        try {
+          await updateApplicantStage(jobId, applicantId, toStage);
+          showToast(`Moved to ${toStage}`, "success");
+          await loadKanbanBoard();
+        } catch (err) {
+          showToast(err.message, "error");
+          await loadKanbanBoard();
+        }
+      }
+
+      function optimisticStageMove(applicantId, fromStage, toStage) {
+        const fromList = kanbanData[fromStage] || [];
+        const idx = fromList.findIndex(c => c.id === applicantId);
+        if (idx === -1) return;
+        const [card] = fromList.splice(idx, 1);
+        card.pipeline_stage = toStage;
+        card.stage_updated_at = new Date().toISOString();
+        if (!kanbanData[toStage]) kanbanData[toStage] = [];
+        kanbanData[toStage].push(card);
+        renderKanbanBoard();
+      }
+
+      // ==========================================
+      // CONFIRM DIALOG
+      // ==========================================
+      function showConfirmDialog(title, message, confirmText, color = "red") {
+        return new Promise((resolve) => {
+          const colorClasses = color === "emerald"
+            ? "bg-emerald-600 hover:bg-emerald-700"
+            : "bg-red-600 hover:bg-red-700";
+          const overlay = document.createElement("div");
+          overlay.className = "confirm-overlay";
+          overlay.innerHTML = `
+            <div class="confirm-box">
+              <h3 class="font-semibold text-lg text-slate-200 mb-2">${title}</h3>
+              <p class="text-sm text-slate-400 mb-5">${message}</p>
+              <div class="flex justify-end gap-2">
+                <button id="_confirmCancelBtn" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 border border-slate-600 rounded-lg transition-colors">Cancel</button>
+                <button id="_confirmOkBtn" class="px-4 py-2 text-sm font-medium text-white ${colorClasses} rounded-lg transition-colors">${confirmText}</button>
+              </div>
+            </div>`;
+
+          function dismiss(result) { overlay.remove(); resolve(result); }
+
+          // Backdrop click dismisses
+          overlay.addEventListener("click", (e) => { if (e.target === overlay) dismiss(false); });
+          // Stop box clicks from reaching the backdrop listener
+          overlay.querySelector(".confirm-box").addEventListener("click", (e) => e.stopPropagation());
+          // Direct listeners on both buttons — no event delegation needed
+          overlay.querySelector("#_confirmCancelBtn").addEventListener("click", () => dismiss(false));
+          overlay.querySelector("#_confirmOkBtn").addEventListener("click", () => dismiss(true));
+
+          document.body.appendChild(overlay);
+        });
+      }
+
+      // ==========================================
+      // CANDIDATE DETAIL MODAL
+      // ==========================================
+      let detailCandidate = null;
+      let detailHistory = [];
+
+      async function openCandidateDetail(applicantId) {
+        const jobId = selectedJob?.db_job_id || selectedJob?.id;
+        if (!jobId) return;
+        document.getElementById("candidate-detail-overlay").style.display = "flex";
+        document.getElementById("candidate-detail-content").innerHTML = `
+          <div class="py-12 flex flex-col items-center gap-3">
+            <div class="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-slate-400 text-sm">Loading candidate details...</p>
+          </div>`;
+        try {
+          const [detailRes, history] = await Promise.all([
+            Auth.authFetch(`/applicants/${applicantId}`),
+            fetchStageHistory(jobId, applicantId),
+          ]);
+          if (!detailRes.ok) throw new Error("Failed to load candidate details");
+          detailCandidate = await detailRes.json();
+          detailHistory = history;
+          renderCandidateDetail();
+        } catch (err) {
+          document.getElementById("candidate-detail-content").innerHTML = `
+            <div class="py-12 flex flex-col items-center gap-3">
+              <i data-lucide="alert-circle" class="w-8 h-8 text-red-400"></i>
+              <p class="text-red-400 text-sm">${escapeHtml(err.message)}</p>
+            </div>`;
+          lucide.createIcons();
+        }
+      }
+
+      function closeCandidateDetail() {
+        document.getElementById("candidate-detail-overlay").style.display = "none";
+        detailCandidate = null;
+        detailHistory = [];
+      }
+
+      function renderCandidateDetail() {
+        if (!detailCandidate) return;
+        const c = detailCandidate;
+        const score = c.match_score || 0;
+        const status = getCandidateStatus(c);
+        const currentStage = c.pipeline_stage || "Applied";
+        const stageColors = STAGE_COLORS[currentStage] || STAGE_COLORS["Applied"];
+
+        let statusBadge;
+        if (status === "shortlisted") {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Shortlisted</span>`;
+        } else if (status === "review") {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Review</span>`;
+        } else {
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Rejected</span>`;
+        }
+
+        const bd = c.breakdown;
+        function miniBar(label, val, max, colorClass) {
+          const pct = max > 0 ? Math.round((val / max) * 100) : 0;
+          return `<div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 w-12 flex-shrink-0">${label}</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-1.5">
+              <div class="h-full rounded-full ${colorClass}" style="width:${pct}%"></div>
+            </div>
+            <span class="text-xs font-mono font-semibold text-slate-600 w-12 text-right">${val}/${max}</span>
+          </div>`;
+        }
+
+        const breakdownHtml = bd ? `
+          <div class="space-y-2">
+            ${miniBar("Skills", bd.skills || 0, 40, "bg-blue-500")}
+            ${miniBar("Exp", bd.experience || 0, 40, "bg-indigo-400")}
+            ${miniBar("Edu", bd.education || 0, 20, "bg-amber-400")}
+          </div>` : "";
+
+        const skillsArr = getCandidateSkillList(c);
+        const skillTags = skillsArr.map(s => `<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">${escapeHtml(s)}</span>`).join("");
+        const screeningAnswers = Array.isArray(c.custom_answers) ? c.custom_answers : [];
+        const hasCoverLetter = !!(c.cover_letter && String(c.cover_letter).trim());
+
+        const stageControlHtml = renderStageControl(currentStage);
+        const historyHtml = renderStageHistoryTimeline();
+
+        document.getElementById("candidate-detail-content").innerHTML = `
+          <div class="flex items-start justify-between mb-6">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-200">${escapeHtml(c.name || "Unknown")}</h2>
+              <p class="text-sm text-slate-400 mt-0.5">${escapeHtml(c.email || "")}</p>
+              ${c.phone ? `<p class="text-sm text-slate-500 mt-0.5">${escapeHtml(c.phone)}</p>` : ""}
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              ${statusBadge}
+              <span class="pipeline-stage-badge ${stageColors.bg} ${stageColors.text} ring-1 ring-inset ${stageColors.ring}">${escapeHtml(currentStage)}</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Match Score</span>
+                <span class="text-2xl font-bold ${status === 'shortlisted' ? 'text-emerald-600' : status === 'review' ? 'text-amber-600' : 'text-red-500'}">${score}</span>
+              </div>
+              ${breakdownHtml}
+            </div>
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Details</div>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400">Experience</span>
+                  <span class="font-semibold text-slate-200">${c.years_experience ?? "—"} yrs</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400">Skills</span>
+                  <span class="font-semibold text-slate-200">${skillsArr.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          ${skillsArr.length > 0 ? `
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Skills</div>
+            <div class="flex flex-wrap gap-1.5">${skillTags}</div>
+          </div>` : ""}
+
+          ${c.summary ? `
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">AI Summary</div>
+            <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(c.summary)}</p>
+          </div>` : ""}
+
+          ${(c.portfolio_url || c.linkedin_url) ? `
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Links</div>
+            <div class="flex flex-col gap-1.5 text-sm">
+              ${c.portfolio_url ? `<a href="${escapeHtml(c.portfolio_url)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:text-blue-200 underline">Portfolio / GitHub</a>` : ""}
+              ${c.linkedin_url ? `<a href="${escapeHtml(c.linkedin_url)}" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:text-blue-200 underline">LinkedIn</a>` : ""}
+            </div>
+          </div>` : ""}
+
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Pipeline Stage</div>
+            ${stageControlHtml}
+          </div>
+
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Stage History</div>
+            ${historyHtml}
+          </div>
+
+          <div class="mb-6">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Override Status</div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <select id="detail-status-select"
+                class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300">
+                <option value="">— Keep current status —</option>
+                <option value="shortlisted" ${c.status === 'shortlisted' ? 'selected' : ''}>Shortlisted</option>
+                <option value="review" ${c.status === 'review' ? 'selected' : ''}>Needs Review</option>
+                <option value="rejected" ${c.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+              </select>
+              <button onclick="applyStatusOverride(${c.id})"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-slate-900 hover:bg-slate-700 text-white rounded-lg transition-colors">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                Save Status
+              </button>
+            </div>
+          </div>
+
+          ${hasCoverLetter ? `
+          <details class="mb-6 rounded-xl border border-slate-200 bg-slate-50">
+            <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-slate-300">Cover Letter</summary>
+            <div class="px-4 pb-4 text-sm text-slate-300 whitespace-pre-line leading-relaxed">${escapeHtml(c.cover_letter)}</div>
+          </details>` : ""}
+
+          ${screeningAnswers.length > 0 ? `
+          <details class="mb-6 rounded-xl border border-slate-200 bg-slate-50">
+            <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-slate-300">Screening Answers</summary>
+            <div class="px-4 pb-4 space-y-3">
+              ${screeningAnswers.map((item) => `
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">${escapeHtml(item.question || "Question")}</p>
+                  <p class="text-sm text-slate-300 leading-relaxed whitespace-pre-line">${escapeHtml(item.answer || "")}</p>
+                </div>
+              `).join("")}
+            </div>
+          </details>` : ""}
+
+          <div class="flex items-center justify-between gap-2 mt-6 pt-4 border-t border-slate-200">
+            <button onclick="downloadResume(${c.id})" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 border border-slate-600 rounded-lg transition-colors">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Download Resume
+            </button>
+            <button onclick="deleteCandidate(${c.id}, ${JSON.stringify(escapeHtml(c.name || 'this candidate'))}, true)"
+              class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 hover:text-red-700 border border-red-200 bg-white hover:bg-red-50 rounded-lg transition-colors">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              Delete Candidate
+            </button>
+          </div>`;
+        lucide.createIcons();
+      }
+
+      // ==========================================
+      // STAGE CHANGE CONTROL
+      // ==========================================
+      function renderStageControl(currentStage) {
+        const isTerminal = TERMINAL_STAGES.has(currentStage);
+        const currentIdx = PIPELINE_STAGES.indexOf(currentStage);
+        const stageButtons = PIPELINE_STAGES.map((stage, idx) => {
+          const isCurrent = stage === currentStage;
+          const colors = STAGE_COLORS[stage];
+          let disabled = false;
+          let tooltip = "";
+
+          if (isCurrent) {
+            disabled = true;
+            tooltip = "Current stage";
+          } else if (isTerminal) {
+            disabled = true;
+            tooltip = `Cannot change: candidate is ${currentStage}`;
+          } else if (stage !== "Rejected" && idx < currentIdx) {
+            disabled = true;
+            tooltip = "Cannot move backwards in pipeline";
+          }
+
+          const cls = isCurrent
+            ? `${colors.bg} ${colors.text} ring-2 ring-inset ${colors.ring} font-semibold`
+            : disabled
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+              : `bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer`;
+
+          return `<button
+            class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${cls}"
+            ${disabled ? 'disabled' : `onclick="handleStageChange('${stage}')"`}
+            ${tooltip ? `title="${escapeHtml(tooltip)}"` : ""}
+          >${escapeHtml(stage)}</button>`;
+        }).join("");
+
+        return `
+          <div class="flex flex-wrap gap-1.5 mb-3" id="stage-buttons">
+            ${stageButtons}
+          </div>
+          <div class="flex items-center gap-2" id="stage-note-section">
+            <input type="text" id="stage-note-input" placeholder="Add a note about this stage change..."
+              class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent placeholder-slate-300 transition bg-white"
+              ${isTerminal ? "disabled" : ""} />
+          </div>`;
+      }
+
+      async function handleStageChange(newStage) {
+        if (!detailCandidate) return;
+        const jobId = selectedJob?.db_job_id || selectedJob?.id;
+        if (!jobId) return;
+        const currentStage = detailCandidate.pipeline_stage || "Applied";
+        if (newStage === currentStage) return;
+
+        if (TERMINAL_STAGES.has(newStage)) {
+          const confirmed = await showConfirmDialog(
+            `Move to ${newStage}?`,
+            `This will mark <strong>${escapeHtml(detailCandidate.name)}</strong> as <strong>${newStage}</strong>. This action cannot be undone.`,
+            newStage === "Hired" ? "Mark as Hired" : "Reject Candidate",
+            newStage === "Hired" ? "emerald" : "red"
+          );
+          if (!confirmed) return;
+        }
+
+        const note = document.getElementById("stage-note-input")?.value?.trim() || null;
+        document.querySelectorAll("#stage-buttons button").forEach(btn => btn.disabled = true);
+
+        try {
+          const updated = await updateApplicantStage(jobId, detailCandidate.id, newStage, note);
+          detailCandidate.pipeline_stage = updated.pipeline_stage;
+          detailCandidate.stage_updated_at = updated.stage_updated_at;
+          detailHistory = await fetchStageHistory(jobId, detailCandidate.id);
+          showToast(`Moved to ${newStage}`, "success");
+          const noteInput = document.getElementById("stage-note-input");
+          if (noteInput) noteInput.value = "";
+          renderCandidateDetail();
+          if (pipelineViewMode === "kanban") loadKanbanBoard();
+          if (selectedJob) fetchAndRenderCandidates(selectedJob);
+        } catch (err) {
+          showToast(err.message, "error");
+          renderCandidateDetail();
+        }
+      }
+
+      // ==========================================
+      // STAGE HISTORY TIMELINE
+      // ==========================================
+      function renderStageHistoryTimeline() {
+        if (!detailHistory || detailHistory.length === 0) {
+          return `<div class="py-4 text-center text-sm text-slate-500">No stage changes yet</div>`;
+        }
+        const entries = detailHistory.map(entry => {
+          const fromColors = STAGE_COLORS[entry.from_stage] || STAGE_COLORS["Applied"];
+          const toColors = STAGE_COLORS[entry.to_stage] || STAGE_COLORS["Applied"];
+          return `
+            <div class="timeline-entry">
+              <div class="timeline-dot" style="background: ${toColors.dot}"></div>
+              <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                <span class="pipeline-stage-badge ${fromColors.bg} ${fromColors.text} ring-1 ring-inset ${fromColors.ring}">${escapeHtml(entry.from_stage)}</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500 flex-shrink-0"></i>
+                <span class="pipeline-stage-badge ${toColors.bg} ${toColors.text} ring-1 ring-inset ${toColors.ring}">${escapeHtml(entry.to_stage)}</span>
+              </div>
+              <div class="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                <span>${formatDate(entry.changed_at)}</span>
+                ${entry.recruiter_email ? `<span class="text-slate-400">by ${escapeHtml(entry.recruiter_email)}</span>` : ""}
+              </div>
+              ${entry.note ? `<p class="text-xs text-slate-400 mt-1 italic">"${escapeHtml(entry.note)}"</p>` : ""}
+            </div>`;
+        }).join("");
+        return `<div class="timeline">${entries}</div>`;
+      }
+
+      // ==========================================
+      // STAGE BADGE HELPERS
+      // ==========================================
+      function getStageBadgeHtml(stage) {
+        if (!stage) return "";
+        const colors = STAGE_COLORS[stage] || STAGE_COLORS["Applied"];
+        return `<span class="pipeline-stage-badge ${colors.bg} ${colors.text} ring-1 ring-inset ${colors.ring} mt-1">${escapeHtml(stage)}</span>`;
+      }
+
+      // ==========================================
+      // HEALTH CHECK
+      // ==========================================
+      async function checkHealthStatus() {
+        try {
+          const res = await fetch("/api/health");
+          if (!res.ok) throw new Error("error");
+          const data = await res.json();
+          const indicator = document.getElementById("ai-health-indicator");
+          const dot       = document.getElementById("ai-health-dot");
+          const ping      = document.getElementById("ai-health-ping");
+          const label     = document.getElementById("ai-health-label");
+          if (!indicator) return;
+          if (data.ai_ready) {
+            indicator.className = "flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full";
+            dot.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
+            ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+            label.textContent = "AI Engine Active";
+            label.className = "text-xs font-medium text-emerald-700";
+          } else {
+            indicator.className = "flex items-center gap-2 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full";
+            dot.className = "relative inline-flex rounded-full h-2 w-2 bg-amber-500";
+            ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+            label.textContent = data.ai_reason || "AI Unavailable";
+            label.className = "text-xs font-medium text-amber-700";
+          }
+        } catch {
+          const indicator = document.getElementById("ai-health-indicator");
+          const dot       = document.getElementById("ai-health-dot");
+          const ping      = document.getElementById("ai-health-ping");
+          const label     = document.getElementById("ai-health-label");
+          if (!indicator) return;
+          indicator.className = "flex items-center gap-2 bg-red-50 border border-red-100 px-3 py-1 rounded-full";
+          dot.className = "relative inline-flex rounded-full h-2 w-2 bg-red-500";
+          ping.className = "absolute hidden";
+          label.textContent = "API Offline";
+          label.className = "text-xs font-medium text-red-600";
+        }
+      }
+
+      // ==========================================
+      // EDIT JOB
+      // ==========================================
+      function _parseDescriptionSections(description) {
+        const text = String(description || "").trim();
+        if (!text) return { about_role: "", responsibilities: "", looking_for: "" };
+        const about = text.match(/About the Role:\s*([\s\S]*?)(?=\n\nResponsibilities:|$)/i)?.[1]?.trim() || text;
+        const responsibilities = text.match(/Responsibilities:\s*([\s\S]*?)(?=\n\nWhat We'?re Looking For:|$)/i)?.[1]?.trim() || text;
+        const lookingFor = text.match(/What We'?re Looking For:\s*([\s\S]*?)$/i)?.[1]?.trim() || text;
+        return { about_role: about, responsibilities, looking_for: lookingFor };
+      }
+
+      function _mapJobToWizardData(job) {
+        const parsed = _parseDescriptionSections(job.description || "");
+        const requiredSkills = (job.required_skills || []).map((name) => ({ name, type: "required" }));
+        const niceSkills = (job.nice_to_have_skills || []).map((name) => ({ name, type: "nice" }));
+        return {
+          title: job.title || "",
+          department: job.department || "",
+          job_type: job.job_type || "",
+          work_location_type: job.work_location_type || "",
+          office_location: job.office_location || "",
+          openings: job.openings ?? 1,
+          status: job.status || "Draft",
+          required_experience: job.required_experience ?? job.min_experience ?? "",
+          required_education: job.required_education || "None",
+          visa_sponsorship: job.visa_sponsorship ? "Yes" : "No",
+          about_role: parsed.about_role,
+          responsibilities: parsed.responsibilities,
+          looking_for: parsed.looking_for,
+          salary_min: job.salary_min ?? "",
+          salary_max: job.salary_max ?? "",
+          currency: job.currency || "USD",
+          pay_frequency: job.pay_frequency || "Annual",
+          show_salary: job.show_salary !== false,
+          equity_bonus: job.equity_bonus || "",
+          benefits: Array.isArray(job.benefits) ? job.benefits : [],
+          require_cover_letter: !!job.require_cover_letter,
+          require_portfolio: !!job.require_portfolio,
+          require_linkedin: !!job.require_linkedin,
+          custom_questions: Array.isArray(job.custom_questions) ? job.custom_questions : [],
+          hiring_manager: job.hiring_manager || "",
+          target_hire_date: job.target_hire_date || "",
+          application_deadline: job.application_deadline || "",
+          visibility: job.visibility || "Public",
+          skills: [...requiredSkills, ...niceSkills],
+        };
+      }
+
+      async function openEditJobModal(jobId, event) {
+        if (event) event.stopPropagation();
+        const overlay = document.getElementById("edit-job-modal-overlay");
+        overlay.style.display = "flex";
+
+        const jobs = getStoredJobs();
+        const cached = jobs.find(j => (j.db_job_id || j.id) === jobId);
+        if (cached) {
+          initJobWizard("edit", _mapJobToWizardData(cached), jobId);
+        } else {
+          initJobWizard("edit", _jobWizardDefaults(), jobId);
+        }
+
+        try {
+          const res = await Auth.authFetch(`/jobs/${jobId}`);
+          if (res.ok) {
+            const liveJob = await res.json();
+            initJobWizard("edit", _mapJobToWizardData(liveJob), jobId);
+          }
+        } catch { }
+        lucide.createIcons();
+      }
+
+      function closeEditJobModal() {
+        document.getElementById("edit-job-modal-overlay").style.display = "none";
+        resetJobWizard("edit");
+      }
+
+      async function submitEditJob(event) {
+        if (event) event.preventDefault();
+        await jobWizardSubmit("edit");
+      }
+
+      // ==========================================
+      // TOGGLE JOB STATUS
+      // ==========================================
+      async function toggleJobStatus(jobId, event) {
+        if (event) event.stopPropagation();
+        try {
+          const res = await Auth.authFetch(`/jobs/${jobId}/status`, { method: "PATCH" });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to toggle status");
+          }
+          const updated = await res.json();
+          showToast(`Job ${updated.is_active ? "activated" : "deactivated"}`, "success");
+          await refreshJobAnalytics();
+          renderSessionsTable();
+          lucide.createIcons();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==========================================
+      // DELETE CANDIDATE
+      // ==========================================
+      async function deleteCandidate(applicantId, displayName, fromDetailModal = false) {
+        const confirmed = await showConfirmDialog(
+          "Delete Candidate",
+          `Are you sure you want to permanently delete <strong>${displayName}</strong>? This cannot be undone.`,
+          "Delete",
+          "red"
+        );
+        if (!confirmed) return;
+        try {
+          const res = await Auth.authFetch(`/applicants/${applicantId}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 204) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Failed to delete candidate");
+          }
+          showToast("Candidate deleted", "success");
+          if (fromDetailModal) closeCandidateDetail();
+          if (selectedJob) fetchAndRenderCandidates(selectedJob);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==========================================
+      // MANUAL STATUS OVERRIDE
+      // ==========================================
+      async function applyStatusOverride(applicantId) {
+        const select = document.getElementById("detail-status-select");
+        const newStatus = select?.value;
+        if (!newStatus) { showToast("Select a status first", "error"); return; }
+        try {
+          const res = await Auth.authFetch(`/applicants/${applicantId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Failed to update status");
+          }
+          const updated = await res.json();
+          if (detailCandidate) detailCandidate.status = updated.status;
+          showToast(`Status updated to ${newStatus}`, "success");
+          renderCandidateDetail();
+          if (selectedJob) fetchAndRenderCandidates(selectedJob);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      }
+
+      // ==========================================
+      // BULK SELECTION + BULK STATUS
+      // ==========================================
+      function updateBulkActionBar() {
+        const checkboxes  = document.querySelectorAll(".candidate-checkbox:checked");
+        const allBoxes    = document.querySelectorAll(".candidate-checkbox");
+        const bar         = document.getElementById("bulk-action-bar");
+        const countLabel  = document.getElementById("bulk-selected-count");
+        const selectAll   = document.getElementById("select-all-candidates");
+        const n = checkboxes.length;
+        if (bar) bar.style.display = n > 0 ? "flex" : "none";
+        if (countLabel) countLabel.textContent = `${n} candidate${n !== 1 ? "s" : ""} selected`;
+        if (selectAll) {
+          selectAll.indeterminate = n > 0 && n < allBoxes.length;
+          selectAll.checked = n > 0 && n === allBoxes.length;
+        }
+      }
+
+      function toggleSelectAll(checked) {
+        document.querySelectorAll(".candidate-checkbox").forEach(cb => { cb.checked = checked; });
+        updateBulkActionBar();
+      }
+
+      function clearBulkSelection() {
+        document.querySelectorAll(".candidate-checkbox").forEach(cb => { cb.checked = false; });
+        const selectAll = document.getElementById("select-all-candidates");
+        if (selectAll) { selectAll.checked = false; selectAll.indeterminate = false; }
+        updateBulkActionBar();
+      }
+
+      async function applyBulkStatus() {
+        const checkboxes = document.querySelectorAll(".candidate-checkbox:checked");
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id)).filter(Boolean);
+        const status = document.getElementById("bulk-status-select")?.value;
+        if (!ids.length) { showToast("No candidates selected", "error"); return; }
+        if (!status)     { showToast("Select a status to apply", "error"); return; }
+
+        try {
+          const res = await Auth.authFetch("/applicants/bulk/status", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ applicant_ids: ids, status }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || "Bulk update failed");
+          }
+          showToast(`${ids.length} candidate${ids.length !== 1 ? "s" : ""} updated to ${status}`, "success");
+          clearBulkSelection();
+          if (selectedJob) fetchAndRenderCandidates(selectedJob);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
       }
 
       // ==========================================
@@ -1738,6 +3388,9 @@
         const user    = Auth.getUser();
         const emailEl = document.getElementById("nav-user-email");
         if (user?.email && emailEl) emailEl.textContent = user.email;
+
+        // Check AI/API health
+        checkHealthStatus();
 
         showDashboard();
         lucide.createIcons();

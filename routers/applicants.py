@@ -116,7 +116,7 @@ async def apply_for_job(
         name=candidate_data.get("name", "Unknown"),
         email=candidate_data.get("email", pre_scan_email or "N/A"),
         phone=candidate_data.get("phone", ""),
-        years_experience=int(total_years_experience),
+        years_experience=max(0, int(round(total_years_experience))),
         skills=skills_with_years,
         resume_text=text[:10000],
         resume_pdf=file_content,  # Store original PDF for download

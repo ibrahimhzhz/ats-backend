@@ -5,6 +5,7 @@ import os
 import asyncio
 import concurrent.futures
 import time
+import re
 from dotenv import dotenv_values
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -140,39 +141,149 @@ def clean_json_string(text):
         text = "\n".join(lines)
     return text
 
+
+DEFAULT_JD_REQUIREMENTS: Dict[str, Any] = {
+    "must_have_skills": [],
+    "minimum_years_experience": 0.0,
+    "education_requirement": "Not specified",
+    "offers_visa_sponsorship": None,
+}
+
+
+CANDIDATE_FACT_SCHEMA: Dict[str, Any] = {
+    "type": "OBJECT",
+    "properties": {
+        "total_years_experience": {
+            "type": "NUMBER",
+            "description": "Calculated total years of professional working experience from date ranges. Return a decimal when needed (e.g., 0.5, 1.5). Return 0 only if none.",
+        },
+        "skills": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "name": {
+                        "type": "STRING",
+                        "description": "The canonical skill name (e.g. 'Python', 'React', 'AWS').",
+                    },
+                    "years": {
+                        "type": "NUMBER",
+                        "description": "Estimated years of experience with this skill inferred from job date ranges. Use 0.5 for less than 1 year. Never exceed total_years_experience.",
+                    },
+                },
+                "required": ["name", "years"],
+            },
+            "description": "All explicitly mentioned skills with estimated years of experience per skill.",
+        },
+        "highest_education_level": {
+            "type": "STRING",
+            "description": "Highest degree earned. Must be exactly one of: 'High School', 'Bachelors', 'Masters', 'PhD', or 'None'.",
+        },
+        "job_titles": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+            "description": "List of all professional job titles held by the candidate.",
+        },
+        "requires_sponsorship": {
+            "type": "BOOLEAN",
+            "description": "True if the resume explicitly mentions needing a visa, OPT, CPT, or sponsorship. False otherwise.",
+        },
+    },
+    "required": [
+        "total_years_experience",
+        "skills",
+        "highest_education_level",
+        "job_titles",
+        "requires_sponsorship",
+    ],
+}
+
+
+def normalize_job_requirements(job_requirements: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Normalize extracted job requirements to a strict, typed schema."""
+    if not isinstance(job_requirements, dict):
+        return dict(DEFAULT_JD_REQUIREMENTS)
+
+    skills = job_requirements.get("must_have_skills") or []
+    if not isinstance(skills, list):
+        skills = []
+    normalized_skills = []
+    for skill in skills:
+        val = str(skill).strip()
+        if val:
+            normalized_skills.append(val)
+
+    try:
+        min_years = float(job_requirements.get("minimum_years_experience") or 0.0)
+    except (TypeError, ValueError):
+        min_years = 0.0
+    min_years = max(0.0, min_years)
+
+    education_requirement = str(
+        job_requirements.get("education_requirement") or "Not specified"
+    ).strip() or "Not specified"
+
+    visa_value = job_requirements.get("offers_visa_sponsorship")
+    if isinstance(visa_value, bool):
+        offers_visa_sponsorship = visa_value
+    elif visa_value is None:
+        offers_visa_sponsorship = None
+    else:
+        text = str(visa_value).strip().lower()
+        if text in {"true", "yes", "y", "1"}:
+            offers_visa_sponsorship = True
+        elif text in {"false", "no", "n", "0"}:
+            offers_visa_sponsorship = False
+        else:
+            offers_visa_sponsorship = None
+
+    return {
+        "must_have_skills": normalized_skills,
+        "minimum_years_experience": min_years,
+        "education_requirement": education_requirement,
+        "offers_visa_sponsorship": offers_visa_sponsorship,
+    }
+
 # --- 3. LEVEL 1: JD REQUIREMENT EXTRACTION (Grounded) ---
 
-async def extract_jd_requirements(jd_text: str) -> List[str]:
+async def extract_jd_requirements(jd_text: str) -> Dict[str, Any]:
     """
-    LEVEL 1: Rule-Based JD Extraction
-    
-    Extracts verbatim requirement sentences from a Job Description.
-    These will be used in Level 2 for grounded verification.
-    
-    Returns:
-        List of exact, verbatim requirement sentences from the JD.
+    LEVEL 1: Strict JD normalization.
+
+    Converts a freeform job description into a deterministic JSON contract used
+    by downstream screening and scoring logic.
     """
-    print("📋 Extracting JD requirements (Level 1: Grounded Extraction)...")
+    print("📋 Extracting structured JD requirements (Level 1 baseline)...")
     await rate_limiter.wait_if_needed()
     model = _get_model()
     if model is None:
-        return []
+        return dict(DEFAULT_JD_REQUIREMENTS)
 
     prompt = f"""
-    You are a strict compliance parser. Extract every single sentence from the provided 
-    Job Description that contains a hard requirement (look for verbs like 'require', 
-    'must', 'need', 'should have', 'experience with', 'knowledge of', 'proficiency in').
-
-    CRITICAL CONSTRAINT: You must extract the exact, verbatim sentence. Do not summarize. 
-    Do not interpret. Do not rephrase. Copy-paste the exact sentence as it appears.
+        You are a strict information extractor.
+        Convert the job description into a strict JSON object with EXACTLY these keys:
+        - must_have_skills: array of canonical skill names (strings only)
+        - minimum_years_experience: number (float or int)
+        - education_requirement: string (single concise requirement)
+        - offers_visa_sponsorship: true, false, or null if not specified
 
     JOB DESCRIPTION:
     {jd_text[:8000]}
 
-    Return a strict JSON array of strings. Each string is an exact requirement sentence.
-    Example: ["Candidate must have 3+ years of Python experience.", "Bachelor's degree in Computer Science required."]
+        RULES:
+        1) Include only hard requirements for must_have_skills.
+        2) If years are unspecified, set minimum_years_experience to 0.
+        3) Keep education_requirement as "Not specified" when absent.
+        4) Do NOT add extra keys.
+        5) Return ONLY JSON.
     
-    Return ONLY the JSON array. No markdown, no explanation.
+        Example:
+        {{
+            "must_have_skills": ["Python", "React", "PostgreSQL"],
+            "minimum_years_experience": 3,
+            "education_requirement": "Bachelor's in Computer Science or equivalent",
+            "offers_visa_sponsorship": false
+        }}
     """
 
     try:
@@ -188,38 +299,33 @@ async def extract_jd_requirements(jd_text: str) -> List[str]:
             )
         )
         json_text = clean_json_string(response.text)
-        requirements = json.loads(json_text)
-        
-        # Validate it's a list of strings
-        if not isinstance(requirements, list):
-            print(f"⚠️ AI returned non-list: {type(requirements)}")
-            return []
-        
-        # Filter to only strings
-        requirements = [str(req) for req in requirements if req and isinstance(req, str)]
-        
-        print(f"✅ Extracted {len(requirements)} JD requirements")
+        requirements = normalize_job_requirements(json.loads(json_text))
+        print(
+            "✅ Structured JD extracted "
+            f"({len(requirements['must_have_skills'])} skills, "
+            f"{requirements['minimum_years_experience']} yrs min)"
+        )
         return requirements
 
     except Exception as e:
         print(f"❌ JD REQUIREMENT EXTRACTION FAILED: {str(e)}")
-        return []
+        return dict(DEFAULT_JD_REQUIREMENTS)
 
 
 # --- 4. LEVEL 2: GROUNDED RESUME VERIFICATION ---
 
 async def extract_candidate_facts(
     resume_text: str,
-    jd_requirements: List[str] = None,
+    job_requirements: Optional[Dict[str, Any]] = None,
     fail_on_unavailable: bool = True,
 ) -> Dict[str, Any]:
     """
     LEVEL 2: Grounded Resume Verification
     
-    Single-pass fact extraction with optional JD requirement matching.
-    If jd_requirements are provided, the AI must provide verbatim citation quotes.
+    Single-pass factual extraction from a resume.
+    AI performs extraction only (no evaluation/judgment).
     """
-    print("🤖 Sending resume to Gemini for fact extraction (single pass)...")
+    print("🤖 Sending resume to Gemini for strict fact extraction...")
     await rate_limiter.wait_if_needed()
     model = _get_model()
     if model is None:
@@ -231,73 +337,33 @@ async def extract_candidate_facts(
             "email": "unknown@error.com",
             "phone": "",
             "total_years_experience": 0.0,
-            "recent_job_titles": [],
+            "highest_education_level": "None",
+            "job_titles": [],
+            "skills": [],
             "skills_with_years": {},
-            "metrics_bullet_count": 0,
+            "skill_matches": [],
+            "requires_sponsorship": False,
+            "requires_visa_sponsorship": False,
         }
 
-    # Base extraction fields
-    base_schema = """
-    {{
-        "name": "Full Name or Unknown",
-        "email": "email@example.com",
-        "phone": "number or empty string",
-        "total_years_experience": 3.5,
-        "recent_job_titles": ["Software Engineer", "Junior Developer"],
-        "skills_with_years": {{"Python": 3.5, "SQL": 1.0, "Docker": 0.5}},
-        "metrics_bullet_count": 4"""
-    
-    # Add requirement matching if JD requirements provided
-    if jd_requirements and len(jd_requirements) > 0:
-        req_schema = """,
-        "jd_requirement_matches": [
-            {{
-                "requirement": "exact requirement sentence",
-                "is_met": true,
-                "citation_quote": "exact verbatim text from resume proving this requirement"
-            }}
-        ]"""
-        full_schema = base_schema + req_schema + "\n    }"
-        
-        requirements_section = f"""
-    
-    JD REQUIREMENTS TO VERIFY:
-    {json.dumps(jd_requirements, indent=2)}
-    
-    REQUIREMENT MATCHING RULES (CRITICAL):
-    - For EACH requirement in the list above, you must add an entry to "jd_requirement_matches"
-    - If the candidate meets the requirement based on their resume, set "is_met": true
-    - CRITICAL CONSTRAINT: If "is_met" is true, you MUST provide an exact, verbatim 
-      copy-pasted string from the resume in "citation_quote". This should be the 
-      specific sentence or phrase that proves they meet the requirement.
-    - If no exact text evidence exists in the resume, "is_met" must be false and 
-      "citation_quote" must be null
-    - Do NOT summarize or paraphrase the citation - it must be word-for-word from the resume
-    """
-    else:
-        full_schema = base_schema + "\n    }"
-        requirements_section = ""
+    normalized_requirements = normalize_job_requirements(job_requirements)
+    required_skills = normalized_requirements.get("must_have_skills", [])
 
     prompt = f"""
-    You are a precise data extraction AI. Your ONLY job is to extract factual
-    data from a resume. Do NOT evaluate, score, or judge the candidate.
+    You are a strict, objective data extraction system for an Applicant Tracking System (ATS).
+    Your ONLY job is to read the following resume text and extract the facts exactly as requested.
 
-    RESUME TEXT:
+    RULES:
+    1. Do not evaluate the candidate or make hiring decisions.
+    2. Do not infer or guess skills not explicitly written in the text.
+    3. Calculate total_years_experience strictly from the date ranges provided.
+     3a. Use decimal years for partial experience (e.g., 0.5, 1.5) instead of rounding down.
+    4. For each skill, estimate years by summing the date ranges of jobs where that skill was used.
+       If no dates are available, use 1.0. Never exceed total_years_experience for any single skill.
+    5. Use 0.5 for skills used less than 1 year.
+
+    RAW RESUME TEXT:
     {resume_text[:12000]}
-    {requirements_section}
-
-    Return a SINGLE valid JSON object with EXACTLY this structure and no other keys:
-    {full_schema}
-
-    EXTRACTION RULES — follow strictly:
-    1. total_years_experience: Calculate from employment date ranges if present. Float. 0.0 if none found.
-    2. recent_job_titles: List every job title string found in the resume. Empty list [] if none.
-    3. skills_with_years: Map each distinct technical skill to estimated years of experience (float).
-       Derive from employment dates. If duration is unclear, use 0.5 as the minimum for any mentioned skill.
-       Use the exact skill name as written in the resume.
-    4. metrics_bullet_count: Count the number of bullet points or sentence fragments that contain
-       at least one quantitative element — a number, %, $, revenue figure, growth rate, or similar.
-    5. Return ONLY the JSON object. No prose, no markdown, no explanation.
     """
 
     try:
@@ -307,46 +373,79 @@ async def extract_candidate_facts(
             lambda: model.generate_content(
                 prompt,
                 generation_config=GenerationConfig(
-                    temperature=0.0,  # Maximum determinism for consistent scoring
-                    response_mime_type="application/json"
+                    response_mime_type="application/json",
+                    response_schema=CANDIDATE_FACT_SCHEMA,
+                    temperature=0.0,
                 )
             )
         )
         json_text = clean_json_string(response.text)
-        data = json.loads(json_text)
+        extracted = json.loads(json_text)
 
-        # --- Type sanitization — never trust LLM types blindly ---
-        data["total_years_experience"] = float(data.get("total_years_experience") or 0)
-        data["recent_job_titles"] = data.get("recent_job_titles") or []
-        if not isinstance(data["recent_job_titles"], list):
-            data["recent_job_titles"] = []
-        data["skills_with_years"] = data.get("skills_with_years") or {}
-        if not isinstance(data["skills_with_years"], dict):
-            data["skills_with_years"] = {}
-        # Ensure all skill year values are floats
-        data["skills_with_years"] = {
-            k: float(v) for k, v in data["skills_with_years"].items()
+        try:
+            total_years_experience = float(extracted.get("total_years_experience") or 0.0)
+        except (TypeError, ValueError):
+            total_years_experience = 0.0
+
+        extracted_skills = extracted.get("skills") or []
+        if not isinstance(extracted_skills, list):
+            extracted_skills = []
+
+        # Build skills_with_years from structured {name, years} objects.
+        # Gracefully handle legacy plain-string responses from the API.
+        skills_with_years: Dict[str, float] = {}
+        skills: List[str] = []
+        for item in extracted_skills:
+            if isinstance(item, dict):
+                name = str(item.get("name") or "").strip()
+                try:
+                    years = float(item.get("years") or 1.0)
+                except (TypeError, ValueError):
+                    years = 1.0
+            else:
+                name = str(item).strip()
+                years = 1.0
+            if name:
+                skills.append(name)
+                skills_with_years[name] = max(0.5, years)  # floor at 0.5
+
+        highest_education_level = str(extracted.get("highest_education_level") or "None").strip() or "None"
+
+        extracted_job_titles = extracted.get("job_titles") or []
+        if not isinstance(extracted_job_titles, list):
+            extracted_job_titles = []
+        job_titles = [str(title).strip() for title in extracted_job_titles if str(title).strip()]
+
+        requires_sponsorship = bool(extracted.get("requires_sponsorship", False))
+        extracted_skill_set = {skill.lower() for skill in skills}
+        skill_matches = [
+            {
+                "skill": skill,
+                "matched": skill.lower() in extracted_skill_set,
+            }
+            for skill in required_skills
+        ]
+
+        email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
+        phone_match = re.search(r"(?:\+?\d[\d\s().-]{7,}\d)", resume_text)
+        name = "Unknown Candidate"
+        first_line = (resume_text or "").splitlines()[0].strip() if resume_text else ""
+        if first_line and len(first_line.split()) <= 6 and "@" not in first_line:
+            name = first_line
+
+        data = {
+            "name": name,
+            "email": email_match.group(0).lower() if email_match else "unknown@error.com",
+            "phone": phone_match.group(0).strip() if phone_match else "",
+            "total_years_experience": float(total_years_experience),
+            "highest_education_level": highest_education_level,
+            "job_titles": job_titles,
+            "skills": skills,
+            "skills_with_years": skills_with_years,
+            "skill_matches": skill_matches,
+            "requires_sponsorship": requires_sponsorship,
+            "requires_visa_sponsorship": requires_sponsorship,
         }
-        data["metrics_bullet_count"] = int(data.get("metrics_bullet_count") or 0)
-        data.setdefault("name", "Unknown Candidate")
-        data.setdefault("email", "unknown@error.com")
-        data.setdefault("phone", "")
-        
-        # Sanitize JD requirement matches if present
-        if "jd_requirement_matches" in data:
-            matches = data.get("jd_requirement_matches") or []
-            if not isinstance(matches, list):
-                matches = []
-            # Ensure each match has required fields
-            sanitized_matches = []
-            for match in matches:
-                if isinstance(match, dict):
-                    sanitized_matches.append({
-                        "requirement": str(match.get("requirement", "")),
-                        "is_met": bool(match.get("is_met", False)),
-                        "citation_quote": match.get("citation_quote")  # Can be None
-                    })
-            data["jd_requirement_matches"] = sanitized_matches
 
         print("✅ Vertex AI Fact Extraction Successful")
         return data
@@ -358,9 +457,13 @@ async def extract_candidate_facts(
             "email": "unknown@error.com",
             "phone": "",
             "total_years_experience": 0.0,
-            "recent_job_titles": [],
+            "highest_education_level": "None",
+            "job_titles": [],
+            "skills": [],
             "skills_with_years": {},
-            "metrics_bullet_count": 0,
+            "skill_matches": [],
+            "requires_sponsorship": False,
+            "requires_visa_sponsorship": False,
         }
 
 
@@ -395,101 +498,79 @@ def calculate_deterministic_score(
     min_experience: float,
     job_title: str = "",
     raw_resume_text: str = "",
+    required_education: str = "Not specified",
+    job_requirements: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    LEVEL 3: Python Anti-Hallucination & Deterministic Scoring
-    
-    Deterministic, bias-free scoring algorithm.
-    LLM extracted the facts; Python does the math and verifies citations.
+    Deterministic ATS score with explicit, inspectable math.
 
     Weights:
-      Skill Depth         40 pts  (depth per required skill, capped by min_experience)
-      JD Requirements     30 pts  (grounded requirement matching with citation verification)
-      Experience          20 pts  (capped at min_experience + 2 years)
-      Impact              10 pts  (quantitative bullet points, 5+ = full marks)
-    Total:               100 pts
+      Experience    40 pts
+      Skills Match  40 pts
+      Education     20 pts
+    Total:         100 pts
     """
+    normalized_requirements = normalize_job_requirements(job_requirements)
+    effective_required_skills = normalized_requirements["must_have_skills"] or required_skills
+    effective_min_experience = (
+        normalized_requirements["minimum_years_experience"]
+        if normalized_requirements["minimum_years_experience"] > 0
+        else float(min_experience or 0)
+    )
+    effective_required_education = (
+        normalized_requirements["education_requirement"]
+        if normalized_requirements["education_requirement"] != "Not specified"
+        else required_education
+    )
+
     skills_with_years: Dict[str, float] = candidate.get("skills_with_years") or {}
     total_years_experience: float = float(candidate.get("total_years_experience") or 0)
-    metrics_bullet_count: int = int(candidate.get("metrics_bullet_count") or 0)
-    jd_requirement_matches: List[Dict] = candidate.get("jd_requirement_matches") or []
+    highest_education_level = str(candidate.get("highest_education_level") or "Unknown")
+    skill_matches_input: List[Dict[str, Any]] = candidate.get("skill_matches") or []
 
     # Normalise skill keys to lowercase once
     candidate_skills_lower: Dict[str, float] = {
         k.lower(): v for k, v in skills_with_years.items()
     }
-    required_skills_lower: List[str] = [s.lower() for s in required_skills]
+    required_skills_lower: List[str] = [s.lower() for s in effective_required_skills if s]
 
-    # ── 1. Skill Depth Score (40 pts) ────────────────────────────────────
-    skill_depth_parts: List[float] = []
+    # ── 1. Experience Score (40 pts) ─────────────────────────────────────
+    exp_denominator = max(effective_min_experience, 1.0)
+    exp_ratio = min(1.0, max(0.0, total_years_experience / exp_denominator))
+    experience_points = exp_ratio * 40.0
+
+    # ── 2. Skills Match Score (40 pts) ───────────────────────────────────
     matched_skills: List[str] = []
-    effective_min = max(min_experience, 1.0)  # avoid division by zero
 
-    for req_skill in required_skills_lower:
-        matched_key, candidate_yrs = _fuzzy_match_skill(req_skill, candidate_skills_lower)
-        if matched_key is not None:
-            depth = min(1.0, candidate_yrs / effective_min)
-            skill_depth_parts.append(depth)
-            matched_skills.append(req_skill)
-        else:
-            skill_depth_parts.append(0.0)
-
-    avg_depth = (
-        sum(skill_depth_parts) / len(skill_depth_parts)
-        if skill_depth_parts else 0.0
-    )
-    skill_depth_points = avg_depth * 40.0
-    matched_skills_count = len(matched_skills)
-
-    # ── 2. JD Requirements Score (30 pts) with Anti-Hallucination ────────
-    # LEVEL 3: Python verifies citation quotes exist in resume text
-    jd_requirements_points = 0.0
-    verified_requirements = 0
-    total_requirements = len(jd_requirement_matches)
-    hallucination_count = 0
-    
-    if total_requirements > 0 and raw_resume_text:
-        # Normalize resume text for comparison (preserve essential content)
-        normalized_resume = " ".join(raw_resume_text.split()).lower()
-        
-        for match in jd_requirement_matches:
-            is_met = match.get("is_met", False)
-            citation_quote = match.get("citation_quote")
-            
-            if is_met and citation_quote:
-                # ANTI-HALLUCINATION CHECK: Verify citation exists in resume
-                normalized_citation = " ".join(str(citation_quote).split()).lower()
-                
-                if normalized_citation in normalized_resume:
-                    # Citation verified - requirement truly met
-                    verified_requirements += 1
-                else:
-                    # HALLUCINATION DETECTED: AI claimed evidence that doesn't exist
-                    hallucination_count += 1
-                    print(f"⚠️ HALLUCINATION DETECTED: Citation not found in resume")
-            elif is_met and not citation_quote:
-                # AI said requirement is met but provided no evidence - reject
-                hallucination_count += 1
-        
-        # Calculate score: percentage of verified requirements
-        jd_requirements_points = (verified_requirements / total_requirements) * 30.0
-        print(f"📊 JD Requirements: {verified_requirements}/{total_requirements} verified ({hallucination_count} hallucinations blocked)")
-
-    # ── 3. Experience Score (20 pts) ─────────────────────────────────────
-    # Simple logic: meet or exceed min_experience = full marks
-    # Below requirement = proportionally reduced
-    if total_years_experience >= min_experience:
-        experience_points = 20.0
+    if skill_matches_input:
+        llm_matches_lower = {
+            str(item.get("skill", "")).strip().lower(): bool(item.get("matched", False))
+            for item in skill_matches_input
+            if isinstance(item, dict) and str(item.get("skill", "")).strip()
+        }
+        for required_skill in required_skills_lower:
+            if llm_matches_lower.get(required_skill, False):
+                matched_skills.append(required_skill)
     else:
-        # Proportional scoring for candidates below requirement
-        experience_points = (total_years_experience / max(min_experience, 1.0)) * 20.0
+        for required_skill in required_skills_lower:
+            matched_key, _ = _fuzzy_match_skill(required_skill, candidate_skills_lower)
+            if matched_key is not None:
+                matched_skills.append(required_skill)
 
-    # ── 4. Impact Score (10 pts) ─────────────────────────────────────────
-    # 5 or more quantitative bullets = full marks
-    impact_points = min(10.0, (metrics_bullet_count / 5.0) * 10.0)
+    matched_skills_count = len(set(matched_skills))
+    required_skill_count = len(required_skills_lower)
+    skill_ratio = (matched_skills_count / required_skill_count) if required_skill_count else 1.0
+    skills_points = skill_ratio * 40.0
+
+    # ── 3. Education Score (20 pts) ──────────────────────────────────────
+    education_met = _education_requirement_met(
+        highest_education_level=highest_education_level,
+        education_requirement=effective_required_education,
+    )
+    education_points = 20.0 if education_met else 0.0
 
     # ── Final Score ───────────────────────────────────────────────────────
-    raw = skill_depth_points + jd_requirements_points + experience_points + impact_points
+    raw = experience_points + skills_points + education_points
     final_score = int(round(raw))
 
     # ── Status Bucketing ─────────────────────────────────────────────────
@@ -500,65 +581,131 @@ def calculate_deterministic_score(
     else:
         status = "rejected"
 
-    # ── Python-Generated Summary (no LLM) ────────────────────────────────
-    # Generate natural language candidate description
-    candidate_name = candidate.get("name", "Candidate")
-    
-    # Build skill description from matched skills
-    if matched_skills_count > 0:
-        skill_list = ", ".join(matched_skills[:3])  # Show top 3 matched skills
-        more_skills = f" and {matched_skills_count - 3} more" if matched_skills_count > 3 else ""
-        skills_desc = f"Proficient in {skill_list}{more_skills}"
-    else:
-        skills_desc = "Limited match with required technical skills"
-    
-    # Build experience description
-    exp_desc = f"with {total_years_experience:.1f} years of professional experience"
-    
-    # Build performance/impact description
-    if metrics_bullet_count >= 5:
-        impact_desc = "Strong track record of measurable achievements and quantifiable impact"
-    elif metrics_bullet_count >= 3:
-        impact_desc = "Demonstrates results-oriented approach with documented achievements"
-    elif metrics_bullet_count >= 1:
-        impact_desc = "Shows some evidence of measurable contributions"
-    else:
-        impact_desc = "Limited quantifiable achievements documented"
-    
-    # Build JD requirements description
-    if total_requirements > 0:
-        req_percentage = (verified_requirements / total_requirements) * 100
-        if req_percentage >= 80:
-            jd_desc = "Meets most job requirements"
-        elif req_percentage >= 50:
-            jd_desc = "Partially meets job requirements"
-        else:
-            jd_desc = "Limited alignment with specific job requirements"
-    else:
-        jd_desc = ""
-    
-    # Combine into natural 2-3 line summary
-    summary_parts = [f"{skills_desc} {exp_desc}.", impact_desc + "."]
-    if jd_desc:
-        summary_parts.append(jd_desc + ".")
-    
-    summary = " ".join(summary_parts)
+    summary = (
+        f"Experience {total_years_experience:.1f}/{exp_denominator:.1f} years, "
+        f"skills matched {matched_skills_count}/{required_skill_count}, "
+        f"education requirement met: {'yes' if education_met else 'no'}."
+    )
 
     return {
         "final_score": final_score,
         "status": status,
         "summary": summary,
         "matched_skills_count": matched_skills_count,
-        "matched_skills": matched_skills,
-        "verified_requirements": verified_requirements,
-        "total_requirements": total_requirements,
-        "hallucination_count": hallucination_count,
+        "matched_skills": sorted(set(matched_skills)),
+        "required_skills_count": required_skill_count,
+        "education_met": education_met,
         "breakdown": {
-            "skill_depth": round(skill_depth_points, 1),
-            "jd_requirements": round(jd_requirements_points, 1),
             "experience": round(experience_points, 1),
-            "impact": round(impact_points, 1),
+            "skills": round(skills_points, 1),
+            "education": round(education_points, 1),
         },
+    }
+
+
+def _education_requirement_met(highest_education_level: str, education_requirement: str) -> bool:
+    """Return whether extracted education satisfies job requirement."""
+    requirement = (education_requirement or "").strip().lower()
+    if not requirement or requirement in {"not specified", "none", "n/a"}:
+        return True
+
+    ranking = {
+        "unknown": 0,
+        "high school": 1,
+        "associate": 2,
+        "bachelor": 3,
+        "master": 4,
+        "phd": 5,
+        "doctorate": 5,
+    }
+
+    level_text = (highest_education_level or "unknown").strip().lower()
+    candidate_rank = 0
+    for key, rank in ranking.items():
+        if key in level_text:
+            candidate_rank = max(candidate_rank, rank)
+
+    required_rank = 0
+    for key, rank in ranking.items():
+        if key in requirement:
+            required_rank = max(required_rank, rank)
+
+    if required_rank == 0:
+        return True
+
+    return candidate_rank >= required_rank
+
+
+def evaluate_knockout_filters(
+    candidate: Dict[str, Any],
+    required_skills: List[str],
+    min_experience: float,
+    job_title: str = "",
+    job_requirements: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Evaluate deterministic knockout conditions and return status metadata."""
+    normalized_requirements = normalize_job_requirements(job_requirements)
+    effective_required_skills = normalized_requirements["must_have_skills"] or required_skills
+    effective_min_experience = (
+        normalized_requirements["minimum_years_experience"]
+        if normalized_requirements["minimum_years_experience"] > 0
+        else float(min_experience or 0)
+    )
+
+    total_years_experience = float(candidate.get("total_years_experience") or 0.0)
+    required_skills_lower = [s.lower() for s in effective_required_skills if s]
+
+    skill_matches = candidate.get("skill_matches") or []
+    candidate_skills_lower = {
+        str(k).lower(): float(v) for k, v in (candidate.get("skills_with_years") or {}).items()
+    }
+
+    matched_skills_count = 0
+    if skill_matches:
+        llm_matches_lower = {
+            str(item.get("skill", "")).strip().lower(): bool(item.get("matched", False))
+            for item in skill_matches
+            if isinstance(item, dict) and str(item.get("skill", "")).strip()
+        }
+        matched_skills_count = sum(1 for s in required_skills_lower if llm_matches_lower.get(s, False))
+    else:
+        for skill in required_skills_lower:
+            key, _ = _fuzzy_match_skill(skill, candidate_skills_lower)
+            if key is not None:
+                matched_skills_count += 1
+
+    if effective_min_experience > 0:
+        exp_ratio = total_years_experience / max(effective_min_experience, 1.0)
+    else:
+        exp_ratio = 1.0
+
+    skill_ratio = (
+        matched_skills_count / len(required_skills_lower)
+        if required_skills_lower
+        else 1.0
+    )
+
+    reasons: List[str] = []
+
+    if "senior" in (job_title or "").lower() and total_years_experience <= 0:
+        reasons.append("0 years of experience for senior role")
+
+    requires_visa = candidate.get("requires_sponsorship")
+    if requires_visa is None:
+        requires_visa = candidate.get("requires_visa_sponsorship")
+    offers_visa = normalized_requirements.get("offers_visa_sponsorship")
+    if requires_visa is True and offers_visa is False:
+        reasons.append("candidate requires visa sponsorship but role does not offer it")
+
+    knockout = bool(reasons)
+    reason = "; ".join(reasons)
+    return {
+        "knockout": knockout,
+        "reason": reason,
+        "experience_ratio": max(0.0, min(1.0, exp_ratio)),
+        "skills_ratio": max(0.0, min(1.0, skill_ratio)),
+        "matched_skills_count": matched_skills_count,
+        "required_skills_count": len(required_skills_lower),
     }
 
 

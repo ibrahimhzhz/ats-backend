@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Union
-from datetime import datetime
+from datetime import datetime, date
 
 
 # ==============================================================================
@@ -61,6 +61,28 @@ class JobCreate(BaseModel):
     description: str
     min_experience: int
     required_skills: List[str]
+    department: Optional[str] = None
+    job_type: Optional[str] = None
+    work_location_type: Optional[str] = None
+    office_location: Optional[str] = None
+    openings: Optional[int] = 1
+    status: Optional[str] = "Draft"
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = "USD"
+    pay_frequency: Optional[str] = "Annual"
+    show_salary: Optional[bool] = True
+    equity_bonus: Optional[str] = None
+    nice_to_have_skills: Optional[List[str]] = None
+    benefits: Optional[List[str]] = None
+    require_cover_letter: Optional[bool] = False
+    require_portfolio: Optional[bool] = False
+    require_linkedin: Optional[bool] = False
+    custom_questions: Optional[List[str]] = Field(default=None, max_length=5)
+    hiring_manager: Optional[str] = None
+    target_hire_date: Optional[date] = None
+    application_deadline: Optional[date] = None
+    visibility: Optional[str] = "Public"
     # NOTE: company_id is intentionally NOT here; it is injected server-side
     #       from the authenticated user's token so tenants can never spoof it.
 
@@ -71,11 +93,42 @@ class JobUpdate(BaseModel):
     min_experience: Optional[int] = None
     required_skills: Optional[List[str]] = None
     is_active: Optional[bool] = None
+    department: Optional[str] = None
+    job_type: Optional[str] = None
+    work_location_type: Optional[str] = None
+    office_location: Optional[str] = None
+    openings: Optional[int] = 1
+    status: Optional[str] = "Draft"
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = "USD"
+    pay_frequency: Optional[str] = "Annual"
+    show_salary: Optional[bool] = True
+    equity_bonus: Optional[str] = None
+    nice_to_have_skills: Optional[List[str]] = None
+    benefits: Optional[List[str]] = None
+    require_cover_letter: Optional[bool] = False
+    require_portfolio: Optional[bool] = False
+    require_linkedin: Optional[bool] = False
+    custom_questions: Optional[List[str]] = Field(default=None, max_length=5)
+    hiring_manager: Optional[str] = None
+    target_hire_date: Optional[date] = None
+    application_deadline: Optional[date] = None
+    visibility: Optional[str] = "Public"
 
 class JobResponse(JobCreate):
     id: int
     company_id: int
     is_active: bool
+    status: str
+    openings: int
+    currency: str
+    pay_frequency: str
+    show_salary: bool
+    require_cover_letter: bool
+    require_portfolio: bool
+    require_linkedin: bool
+    visibility: str
     views: Optional[int] = 0
     application_count: Optional[int] = 0
     form_config: Optional[dict] = None
@@ -125,14 +178,17 @@ class ApplicantResponse(BaseModel):
     years_experience: int
     summary: str
     status: str
+    cover_letter: Optional[str] = None
     breakdown: Optional[dict] = None
+    pipeline_stage: Optional[str] = None
+    stage_updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 class ApplicantStatusUpdate(BaseModel):
     """Schema for updating an applicant's status in the hiring workflow."""
-    status: str  # new | rejected | shortlisted | review | interviewed | hired
+    status: str  # new | knockout | rejected | shortlisted | review | interviewed | hired
 
 class BulkApplicantStatusUpdate(BaseModel):
     """Schema for bulk updating multiple applicants' statuses."""
@@ -144,9 +200,10 @@ class ApplicantDetailResponse(ApplicantResponse):
     phone: Optional[str]
     skills: Union[Dict[str, float], List[str]]
     resume_text: str
+    cover_letter: Optional[str] = None
     linkedin_url: Optional[str] = None
     portfolio_url: Optional[str] = None
-    custom_answers: Optional[dict] = None
+    custom_answers: Optional[List[Dict[str, str]]] = None
 
     class Config:
         from_attributes = True
@@ -163,10 +220,34 @@ class PublicJobResponse(BaseModel):
     description: str
     required_skills: List[str]
     min_experience: int
-    form_config: Optional[dict] = None
+    department: Optional[str] = None
+    job_type: Optional[str] = None
+    work_location_type: Optional[str] = None
+    office_location: Optional[str] = None
+    show_salary: bool = True
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: str = "USD"
+    pay_frequency: str = "Annual"
+    benefits: Optional[List[str]] = None
+    require_cover_letter: bool = False
+    require_portfolio: bool = False
+    require_linkedin: bool = False
+    custom_questions: Optional[List[str]] = None
+    application_deadline: Optional[date] = None
 
     class Config:
         from_attributes = True
+
+
+class ApplicantCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    cover_letter: Optional[str] = None
+    custom_answers: Optional[List[Dict[str, str]]] = None
 
 class PublicApplicationSubmission(BaseModel):
     """Schema for public application submission (validated before processing)."""
@@ -175,4 +256,49 @@ class PublicApplicationSubmission(BaseModel):
     phone: Optional[str] = None
     linkedin_url: Optional[str] = None
     portfolio_url: Optional[str] = None
-    custom_answers: Optional[dict] = None
+    cover_letter: Optional[str] = None
+    custom_answers: Optional[List[Dict[str, str]]] = None
+
+
+# ==============================================================================
+# PIPELINE SCHEMAS
+# ==============================================================================
+
+class PipelineStageUpdate(BaseModel):
+    """Payload to move a candidate to a new pipeline stage."""
+    stage: str
+    note: Optional[str] = None
+
+class StageLogResponse(BaseModel):
+    """Single entry in the stage-change audit trail."""
+    id: int
+    from_stage: str
+    to_stage: str
+    changed_by_recruiter_id: int
+    recruiter_email: Optional[str] = None
+    note: Optional[str] = None
+    changed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PipelineApplicantResponse(BaseModel):
+    """Lightweight applicant representation for the Kanban pipeline view."""
+    id: int
+    name: str
+    email: str
+    match_score: Optional[int] = None
+    status: Optional[str] = None  # scoring bucket (shortlisted/review/rejected)
+    pipeline_stage: str
+    stage_updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class ApplicantPipelineResponse(ApplicantResponse):
+    """Applicant response extended with pipeline fields."""
+    pipeline_stage: str
+    stage_updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

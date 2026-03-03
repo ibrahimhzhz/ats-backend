@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, R
 from sqlalchemy.orm import Session
 from typing import Optional
 from collections import defaultdict, deque
+from datetime import date
 import threading
 import time
 import base64
@@ -60,6 +61,9 @@ def get_public_job(job_id: int, db: Session = Depends(get_db)):
     
     if not job.is_active:
         raise HTTPException(status_code=404, detail="This job posting is no longer active")
+
+    if (job.visibility or "Public") == "Internal":
+        raise HTTPException(status_code=403, detail="This position is not publicly listed")
     
     # Increment view counter
     job.views = (job.views or 0) + 1
@@ -77,6 +81,7 @@ async def submit_public_application(
     phone: Optional[str] = Form(None),
     linkedin_url: Optional[str] = Form(None),
     portfolio_url: Optional[str] = Form(None),
+    cover_letter: Optional[str] = Form(None),
     custom_answers_json: Optional[str] = Form(None),
     resume: UploadFile = File(...),
     website_url_catch: Optional[str] = Form(None),  # Honeypot field for bot detection
@@ -127,6 +132,15 @@ async def submit_public_application(
     
     if not job.is_active:
         raise HTTPException(status_code=400, detail="This job posting is no longer active")
+
+    if (job.visibility or "Public") == "Internal":
+        raise HTTPException(status_code=403, detail="This position is not publicly listed")
+
+    if job.application_deadline and date.today() > job.application_deadline:
+        raise HTTPException(
+            status_code=400,
+            detail="Applications for this position are no longer being accepted",
+        )
     
     # Validate file type
     if not resume.filename.lower().endswith('.pdf'):
@@ -146,13 +160,63 @@ async def submit_public_application(
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid custom_answers_json payload")
 
+    normalized_linkedin = (linkedin_url or "").strip()
+    normalized_portfolio = (portfolio_url or "").strip()
+    normalized_cover_letter = (cover_letter or "").strip()
+
+    if job.require_linkedin and not normalized_linkedin:
+        raise HTTPException(status_code=400, detail="LinkedIn URL is required for this position")
+
+    if job.require_portfolio and not normalized_portfolio:
+        raise HTTPException(status_code=400, detail="Portfolio URL is required for this position")
+
+    if job.require_cover_letter and not normalized_cover_letter:
+        raise HTTPException(status_code=400, detail="Cover letter is required for this position")
+
+    expected_questions = [q.strip() for q in (job.custom_questions or []) if str(q).strip()]
+    normalized_answers = None
+    if expected_questions:
+        if not isinstance(custom_answers, list):
+            raise HTTPException(status_code=400, detail="All custom questions must be answered")
+
+        answer_map: dict[str, str] = {}
+        for item in custom_answers:
+            if not isinstance(item, dict):
+                continue
+            question = str(item.get("question") or "").strip()
+            answer = str(item.get("answer") or "").strip()
+            if question:
+                answer_map[question] = answer
+
+        missing = [q for q in expected_questions if not answer_map.get(q)]
+        if missing:
+            raise HTTPException(status_code=400, detail="All custom questions must be answered")
+
+        normalized_answers = [{"question": q, "answer": answer_map[q]} for q in expected_questions]
+    elif custom_answers is not None:
+        # Allow optional custom answers only as a well-formed list of objects.
+        if not isinstance(custom_answers, list):
+            raise HTTPException(status_code=400, detail="Invalid custom_answers_json payload")
+        normalized_answers = []
+        for item in custom_answers:
+            if not isinstance(item, dict):
+                raise HTTPException(status_code=400, detail="Invalid custom_answers_json payload")
+            question = str(item.get("question") or "").strip()
+            answer = str(item.get("answer") or "").strip()
+            if question or answer:
+                if not question or not answer:
+                    raise HTTPException(status_code=400, detail="Invalid custom_answers_json payload")
+                normalized_answers.append({"question": question, "answer": answer})
+
     duplicate = (
         db.query(models.Applicant)
-        .filter(models.Applicant.job_id == job.id, models.Applicant.email == email)
+        .filter(models.Applicant.job_id == job.id, models.Applicant.email == normalized_email)
         .first()
     )
     if duplicate:
-        raise HTTPException(status_code=409, detail="An application with this email already exists for this job")
+        # Return silent success — don't reveal to the applicant (or scrapers) that
+        # a prior application exists.  The Celery task also guards via unique constraint.
+        return {"status": "success", "message": "Application received and being processed"}
 
     resume_bytes = await resume.read()
     if not resume_bytes:
@@ -169,9 +233,10 @@ async def submit_public_application(
         submitted_name=name,
         submitted_email=normalized_email,
         submitted_phone=phone,
-        linkedin_url=linkedin_url,
-        portfolio_url=portfolio_url,
-        custom_answers=custom_answers,
+        linkedin_url=normalized_linkedin or None,
+        portfolio_url=normalized_portfolio or None,
+        cover_letter=normalized_cover_letter or None,
+        custom_answers=normalized_answers,
     )
     
     return {

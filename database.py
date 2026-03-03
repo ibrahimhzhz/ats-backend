@@ -60,15 +60,41 @@ def run_migrations():
         "ALTER TABLE jobs ADD COLUMN form_config JSON",
         # Level 1: Grounded JD Requirements
         "ALTER TABLE jobs ADD COLUMN jd_requirements JSON",
+        # Redesigned job posting fields
+        "ALTER TABLE jobs ADD COLUMN department TEXT",
+        "ALTER TABLE jobs ADD COLUMN job_type TEXT",
+        "ALTER TABLE jobs ADD COLUMN work_location_type TEXT",
+        "ALTER TABLE jobs ADD COLUMN office_location TEXT",
+        "ALTER TABLE jobs ADD COLUMN openings INTEGER DEFAULT 1",
+        "ALTER TABLE jobs ADD COLUMN salary_min INTEGER",
+        "ALTER TABLE jobs ADD COLUMN salary_max INTEGER",
+        "ALTER TABLE jobs ADD COLUMN currency TEXT DEFAULT 'USD'",
+        "ALTER TABLE jobs ADD COLUMN pay_frequency TEXT DEFAULT 'Annual'",
+        "ALTER TABLE jobs ADD COLUMN show_salary BOOLEAN DEFAULT 1",
+        "ALTER TABLE jobs ADD COLUMN equity_bonus TEXT",
+        "ALTER TABLE jobs ADD COLUMN nice_to_have_skills JSON",
+        "ALTER TABLE jobs ADD COLUMN benefits JSON",
+        "ALTER TABLE jobs ADD COLUMN require_cover_letter BOOLEAN DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN require_portfolio BOOLEAN DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN require_linkedin BOOLEAN DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN custom_questions JSON",
+        "ALTER TABLE jobs ADD COLUMN hiring_manager TEXT",
+        "ALTER TABLE jobs ADD COLUMN target_hire_date DATE",
+        "ALTER TABLE jobs ADD COLUMN application_deadline DATE",
+        "ALTER TABLE jobs ADD COLUMN visibility TEXT DEFAULT 'Public'",
         # applicants table
         "ALTER TABLE applicants ADD COLUMN breakdown JSON",
         f"ALTER TABLE applicants ADD COLUMN created_at {datetime_type}",
         # Public Careers Portal fields
+        "ALTER TABLE applicants ADD COLUMN cover_letter TEXT",
         "ALTER TABLE applicants ADD COLUMN linkedin_url TEXT",
         "ALTER TABLE applicants ADD COLUMN portfolio_url TEXT",
         "ALTER TABLE applicants ADD COLUMN custom_answers JSON",
         # Resume PDF storage for downloads
         f"ALTER TABLE applicants ADD COLUMN resume_pdf {binary_type}",
+        # Hiring Pipeline
+        "ALTER TABLE applicants ADD COLUMN pipeline_stage TEXT DEFAULT 'Applied'",
+        f"ALTER TABLE applicants ADD COLUMN stage_updated_at {datetime_type}",
     ]
 
     def _is_already_exists_error(error_message: str) -> bool:
@@ -113,10 +139,23 @@ def run_migrations():
                 conn.rollback()
                 print(f"⚠️ Dedup migration failed: {e}")
 
+        # Backfill existing applicants to "Applied" pipeline stage
+        backfill_statements = [
+            "UPDATE applicants SET pipeline_stage = 'Applied' WHERE pipeline_stage IS NULL",
+        ]
+        for stmt in backfill_statements:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                print(f"⚠️ Backfill migration failed: {e}")
+
         index_statements = [
             "CREATE INDEX IF NOT EXISTS ix_jobs_company_id_created_at ON jobs (company_id, created_at)",
             "CREATE INDEX IF NOT EXISTS ix_applicants_company_job ON applicants (company_id, job_id)",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_applicants_job_email ON applicants (job_id, email)",
+            "CREATE INDEX IF NOT EXISTS ix_stage_log_applicant ON applicant_stage_log (applicant_id)",
         ]
 
         for stmt in index_statements:

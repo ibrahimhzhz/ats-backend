@@ -10,6 +10,7 @@ import models
 from core.celery_app import celery_app
 from database import SessionLocal
 from services.ai_engine import extract_candidate_facts, calculate_deterministic_score, extract_jd_requirements
+from services.ai_engine import evaluate_knockout_filters, normalize_job_requirements
 from services.pdf_parser import extract_text_from_pdf
 
 
@@ -43,36 +44,44 @@ def _build_results_payload(job: models.Job, applicants: List[models.Applicant]) 
             }
         )
 
-    candidates.sort(key=lambda x: x.get("match_score") or 0, reverse=True)
+    candidates.sort(
+        key=lambda x: (
+            1 if x.get("status") == "knockout" else 0,
+            -(x.get("match_score") or 0),
+        )
+    )
 
-    if candidates:
-        top_10_percent = max(1, len(candidates) // 10)
-        shortlisted = candidates[:top_10_percent]
-    else:
-        shortlisted = []
+    eligible_candidates = [c for c in candidates if c.get("status") != "knockout"]
+    shortlisted = []
+    if eligible_candidates:
+        top_10_percent = max(1, len(eligible_candidates) // 10)
+        shortlisted = eligible_candidates[:top_10_percent]
 
     processed_resumes = int(job.processed_resumes or 0)
     total_saved = len(candidates)
     rejected_count = sum(1 for c in candidates if c.get("status") == "rejected")
     review_count = sum(1 for c in candidates if c.get("status") == "review")
+    knockout_count = sum(1 for c in candidates if c.get("status") == "knockout")
 
     duplicates_or_skipped = max(0, processed_resumes - total_saved)
 
     return {
         "total_processed": total_saved,
         "duplicates_skipped": duplicates_or_skipped,
-        "knocked_out": 0,
+        "knocked_out": knockout_count,
         "scored": total_saved,
         "ai_evaluated": total_saved,
         "shortlisted_count": len(shortlisted),
         "review_count": review_count,
         "rejected_count": rejected_count,
+        "knockout_count": knockout_count,
         "shortlisted": shortlisted,
         "all_candidates": candidates,
         "criteria": {
             "job_title": job.title,
             "min_experience": job.min_experience,
             "required_skills": job.required_skills or [],
+            "job_requirements": normalize_job_requirements(job.jd_requirements),
         },
     }
 
@@ -146,8 +155,17 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                     _advance_job_progress(db, job_id, company_id)
                     return
 
+            normalized_requirements = normalize_job_requirements(job.jd_requirements)
             candidate_data: Dict[str, Any] = asyncio.run(
-                extract_candidate_facts(resume_text, job.jd_requirements)
+                extract_candidate_facts(resume_text, normalized_requirements)
+            )
+
+            knockout_result = evaluate_knockout_filters(
+                candidate=candidate_data,
+                required_skills=job.required_skills or [],
+                min_experience=float(job.min_experience or 0),
+                job_title=job.title or "",
+                job_requirements=normalized_requirements,
             )
 
             result = calculate_deterministic_score(
@@ -156,7 +174,14 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 min_experience=float(job.min_experience or 0),
                 job_title=job.title or "",
                 raw_resume_text=resume_text,
+                job_requirements=normalized_requirements,
             )
+
+            candidate_status = result["status"]
+            candidate_summary = result["summary"]
+            if knockout_result["knockout"]:
+                candidate_status = "knockout"
+                candidate_summary = f"Knockout: {knockout_result['reason']} {result['summary']}"
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -166,11 +191,11 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 phone=candidate_data.get("phone", ""),
                 resume_text=resume_text[:10000],
                 resume_pdf=pdf_bytes,
-                years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
+                years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
                 match_score=result["final_score"],
-                summary=result["summary"],
-                status=result["status"],
+                summary=candidate_summary,
+                status=candidate_status,
                 breakdown=result.get("breakdown"),
             )
             db.add(applicant)
@@ -198,9 +223,15 @@ def process_public_resume(
     submitted_phone: str | None = None,
     linkedin_url: str | None = None,
     portfolio_url: str | None = None,
-    custom_answers: dict | None = None,
+    cover_letter: str | None = None,
+    custom_answers: list[dict[str, str]] | None = None,
+    **extra_payload,
 ):
     """Process a public portal submission and increment application_count on success."""
+    if cover_letter is None:
+        cover_letter = extra_payload.get("cover_letter")
+    if custom_answers is None:
+        custom_answers = extra_payload.get("custom_answers")
     with SessionLocal() as db:
         try:
             job = db.query(models.Job).filter(
@@ -227,8 +258,9 @@ def process_public_resume(
             if duplicate:
                 return
 
+            normalized_requirements = normalize_job_requirements(job.jd_requirements)
             candidate_data: Dict[str, Any] = asyncio.run(
-                extract_candidate_facts(resume_text, job.jd_requirements)
+                extract_candidate_facts(resume_text, normalized_requirements)
             )
 
             if submitted_name and submitted_name.strip():
@@ -243,7 +275,22 @@ def process_public_resume(
                 min_experience=float(job.min_experience or 0),
                 job_title=job.title or "",
                 raw_resume_text=resume_text,
+                job_requirements=normalized_requirements,
             )
+
+            knockout_result = evaluate_knockout_filters(
+                candidate=candidate_data,
+                required_skills=job.required_skills or [],
+                min_experience=float(job.min_experience or 0),
+                job_title=job.title or "",
+                job_requirements=normalized_requirements,
+            )
+
+            candidate_status = result["status"]
+            candidate_summary = result["summary"]
+            if knockout_result["knockout"]:
+                candidate_status = "knockout"
+                candidate_summary = f"Knockout: {knockout_result['reason']} {result['summary']}"
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -253,12 +300,13 @@ def process_public_resume(
                 phone=candidate_data.get("phone", submitted_phone or ""),
                 resume_text=resume_text[:10000],
                 resume_pdf=pdf_bytes,
-                years_experience=int(candidate_data.get("total_years_experience", 0) or 0),
+                years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
                 match_score=result["final_score"],
-                summary=result["summary"],
-                status=result["status"],
+                summary=candidate_summary,
+                status=candidate_status,
                 breakdown=result.get("breakdown"),
+                cover_letter=cover_letter,
                 linkedin_url=linkedin_url,
                 portfolio_url=portfolio_url,
                 custom_answers=custom_answers,
