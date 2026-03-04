@@ -18,6 +18,7 @@ from services.ai_engine import (
     get_ai_unavailable_reason,
     AIServiceUnavailableError,
 )
+from sqlalchemy import text
 from services.job_tracker import job_tracker, JobStatus
 from services.auth import get_current_user
 from middleware import SecurityLoggingMiddleware, SecurityHeadersMiddleware
@@ -110,6 +111,16 @@ app.include_router(auth_router.router)
 app.include_router(jobs.router)
 app.include_router(applicants.router)
 app.include_router(pipeline_router.router)  # Hiring pipeline management
+
+
+
+@app.get("/admin/nuke-jobs-table")
+def nuke_jobs_table():
+    # engine is imported from your database.py file
+    with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS jobs CASCADE;"))
+    return {"message": "Jobs table destroyed. Restart the server to rebuild!"}
+
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
