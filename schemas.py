@@ -183,6 +183,15 @@ class ApplicantResponse(BaseModel):
     pipeline_stage: Optional[str] = None
     stage_updated_at: Optional[datetime] = None
 
+    # Enriched extraction signals (pipeline board & signal badges)
+    extractable_text: Optional[bool] = None
+    employment_gaps: Optional[bool] = None
+    average_tenure_years: Optional[float] = None
+    has_measurable_impact: Optional[bool] = None
+    score_breakdown: Optional[dict] = None
+    knockout_flags: Optional[list] = None
+    candidate_signals: Optional[list] = None
+
     class Config:
         from_attributes = True
 
@@ -204,6 +213,15 @@ class ApplicantDetailResponse(ApplicantResponse):
     linkedin_url: Optional[str] = None
     portfolio_url: Optional[str] = None
     custom_answers: Optional[List[Dict[str, str]]] = None
+
+    # Full enriched extraction detail (candidate profile view)
+    skills_detailed: Optional[list] = None
+    extracted_jobs: Optional[list] = None
+    extracted_education: Optional[list] = None
+    has_contact_info: Optional[bool] = None
+    has_clear_job_titles: Optional[bool] = None
+    cover_letter_analysis: Optional[dict] = None
+    custom_answer_analysis: Optional[list] = None
 
     class Config:
         from_attributes = True

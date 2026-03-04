@@ -46,14 +46,14 @@
         --primary-light: #818cf8;
         --accent: #22d3ee;
         --accent2: #a855f7;
-        --dark: #05050f;
-        --dark2: #0d0d20;
-        --dark3: #12122a;
-        --border: rgba(99,102,241,0.2);
-        --text-main: #e2e8f0;
-        --text-muted: #94a3b8;
-        --glass: rgba(255,255,255,0.03);
-        --glass-border: rgba(255,255,255,0.08);
+        --dark: #ffffff;
+        --dark2: #f8fafc;
+        --dark3: #f1f5f9;
+        --border: rgba(99,102,241,0.18);
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --glass: rgba(255,255,255,0.95);
+        --glass-border: rgba(99,102,241,0.14);
       }
 
       * { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
@@ -63,9 +63,7 @@
       }
 
       body {
-        background: radial-gradient(circle at 14% 0%, rgba(99,102,241,0.12), transparent 36%),
-                    radial-gradient(circle at 86% 18%, rgba(168,85,247,0.1), transparent 38%),
-                    var(--dark) !important;
+        background: #ffffff !important;
         color: var(--text-main) !important;
       }
 
@@ -74,49 +72,64 @@
         color: #fff !important;
       }
       .bg-slate-800 { background-color: var(--primary) !important; }
-      .bg-slate-100 { background-color: rgba(99,102,241,0.14) !important; }
+      .bg-slate-100 { background-color: rgba(99,102,241,0.08) !important; }
       .bg-slate-50,
       .bg-slate-50\/60,
-      .bg-slate-50\/80 { background-color: rgba(13,13,32,0.9) !important; }
+      .bg-slate-50\/80 { background-color: #f8fafc !important; }
       .bg-white,
       .bg-white\/60,
       .bg-white\/80,
-      .bg-white\/10 { background: var(--glass) !important; }
+      .bg-white\/10 { background: #ffffff !important; }
 
-      .text-slate-900,
+      .text-slate-900 { color: #0f172a !important; }
       .text-slate-800,
-      .text-slate-700,
-      .text-slate-600 { color: var(--text-main) !important; }
+      .text-slate-700 { color: #1e293b !important; }
+      .text-slate-600 { color: #334155 !important; }
       .text-slate-500,
-      .text-slate-400,
-      .text-slate-300 { color: var(--text-muted) !important; }
+      .text-slate-400 { color: #64748b !important; }
+      .text-slate-300 { color: #94a3b8 !important; }
 
       .border-slate-300,
       .border-slate-200,
-      .border-slate-100 { border-color: var(--border) !important; }
+      .border-slate-100 { border-color: #e2e8f0 !important; }
 
       .hover\:bg-slate-700:hover,
       .hover\:bg-slate-800:hover { filter: brightness(1.08); }
-      .hover\:bg-slate-50:hover { background: rgba(99,102,241,0.12) !important; }
+      .hover\:bg-slate-50:hover { background: #f8fafc !important; }
 
-      .shadow-sm,
+      .shadow-sm { box-shadow: 0 1px 6px rgba(99,102,241,0.08), 0 1px 2px rgba(0,0,0,0.04) !important; }
       .shadow-xl,
-      .shadow-2xl {
-        box-shadow: 0 16px 40px rgba(0,0,0,0.38) !important;
-      }
+      .shadow-2xl { box-shadow: 0 8px 30px rgba(99,102,241,0.12), 0 2px 8px rgba(0,0,0,0.06) !important; }
 
       header {
-        background: rgba(5,5,15,0.7) !important;
+        background: rgba(5,5,15,0.92) !important;
         backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(99,102,241,0.18) !important;
+      }
+      header .nav-brand { color: #f1f5f9 !important; }
+      header .nav-crumb-sep { color: #475569 !important; }
+      header .nav-crumb { color: #94a3b8 !important; }
+      header .nav-email { color: #64748b !important; }
+      header .nav-signout {
+        color: #94a3b8 !important;
+        background: rgba(255,255,255,0.06) !important;
+        border-color: rgba(255,255,255,0.1) !important;
+      }
+      header .nav-signout:hover {
+        color: #f1f5f9 !important;
+        background: rgba(255,255,255,0.12) !important;
       }
 
       input, textarea, select {
-        background: var(--dark2) !important;
-        color: var(--text-main) !important;
-        border-color: var(--border) !important;
+        background: #ffffff !important;
+        color: #1e293b !important;
+        border-color: #e2e8f0 !important;
+      }
+      input:focus, textarea:focus, select:focus {
+        border-color: var(--primary-light) !important;
       }
       input::placeholder,
-      textarea::placeholder { color: var(--text-muted) !important; }
+      textarea::placeholder { color: #94a3b8 !important; }
 
       .focus\:ring-blue-100:focus,
       .focus\:ring-slate-400:focus {
@@ -130,9 +143,9 @@
       .rounded-lg { border-radius: 16px !important; }
 
       ::-webkit-scrollbar { width: 6px; height: 6px; }
-      ::-webkit-scrollbar-track { background: var(--dark) !important; }
-      ::-webkit-scrollbar-thumb { background: var(--primary) !important; border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: var(--primary-light) !important; }
+      ::-webkit-scrollbar-track { background: #f1f5f9 !important; }
+      ::-webkit-scrollbar-thumb { background: #c7d2fe !important; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--primary) !important; }
 
       .drag-active {
         border-color: var(--primary) !important;
@@ -155,9 +168,9 @@
       .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-clamp: 3; }
 
       .candidate-row { transition: background-color 0.1s ease; }
-      .candidate-row:hover { background-color: rgba(99,102,241,0.08); }
+      .candidate-row:hover { background-color: #eff6ff !important; }
       .job-row { cursor: pointer; transition: background-color 0.1s ease; }
-      .job-row:hover { background-color: rgba(99,102,241,0.08); }
+      .job-row:hover { background-color: #eff6ff !important; }
 
       .view { animation: fade-in 0.18s ease-out; }
 
@@ -171,14 +184,15 @@
       }
       .toast {
         pointer-events: auto; padding: 0.75rem 1rem; border-radius: 12px;
-        font-size: 0.8125rem; font-weight: 500; color: var(--text-main);
-        backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: fade-in 0.18s ease-out;
+        font-size: 0.8125rem; font-weight: 500; color: #1e293b;
+        backdrop-filter: blur(16px); border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 16px rgba(99,102,241,0.12); animation: fade-in 0.18s ease-out;
         max-width: 380px; transition: opacity 0.3s ease, transform 0.3s ease;
+        background: #ffffff;
       }
-      .toast-success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); }
-      .toast-error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); }
-      .toast-info { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); }
+      .toast-success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+      .toast-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+      .toast-info { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
 
       /* Kanban board */
       .kanban-board {
@@ -186,14 +200,14 @@
         padding-bottom: 1rem; min-height: 400px;
       }
       .kanban-column {
-        flex: 0 0 240px; min-width: 240px; background: var(--dark3);
-        border: 1px solid var(--border); border-radius: 12px;
+        flex: 0 0 240px; min-width: 240px; background: #f8fafc;
+        border: 1px solid #e2e8f0; border-radius: 12px;
         display: flex; flex-direction: column; max-height: calc(100vh - 280px);
       }
       .kanban-column-header {
-        padding: 0.75rem; border-bottom: 1px solid var(--border);
+        padding: 0.75rem; border-bottom: 1px solid #e2e8f0;
         font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.05em; color: var(--text-muted);
+        letter-spacing: 0.05em; color: #6366f1;
         display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
       }
       .kanban-column-body {
@@ -201,31 +215,31 @@
         display: flex; flex-direction: column; gap: 0.5rem; min-height: 60px;
       }
       .kanban-column.drag-over .kanban-column-body {
-        background: rgba(99,102,241,0.1); border-radius: 0 0 12px 12px;
+        background: #eef2ff; border-radius: 0 0 12px 12px;
       }
       .kanban-column-terminal { opacity: 0.75; border-style: dashed; }
-      .kanban-column-terminal .kanban-column-header { color: var(--text-muted); }
+      .kanban-column-terminal .kanban-column-header { color: #94a3b8; }
       .kanban-card {
-        background: var(--dark2); border: 1px solid var(--border); border-radius: 10px;
+        background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;
         padding: 0.625rem 0.75rem; cursor: grab;
         transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
         user-select: none;
       }
-      .kanban-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
-      .kanban-card.dragging { opacity: 0.5; border-color: var(--primary); box-shadow: 0 8px 24px rgba(99,102,241,0.3); }
+      .kanban-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(99,102,241,0.15); }
+      .kanban-card.dragging { opacity: 0.5; border-color: var(--primary); box-shadow: 0 8px 24px rgba(99,102,241,0.2); }
 
       /* Stage history timeline */
       .timeline { position: relative; padding-left: 1.5rem; }
       .timeline::before {
         content: ''; position: absolute; left: 0.4375rem; top: 0.5rem; bottom: 0.5rem;
-        width: 2px; background: var(--border);
+        width: 2px; background: #e2e8f0;
       }
       .timeline-entry { position: relative; padding-bottom: 1.25rem; }
       .timeline-entry:last-child { padding-bottom: 0; }
       .timeline-dot {
         position: absolute; left: -1.5rem; top: 0.25rem;
         width: 0.625rem; height: 0.625rem; border-radius: 50%;
-        background: var(--primary); border: 2px solid var(--dark2); z-index: 1;
+        background: var(--primary); border: 2px solid #ffffff; z-index: 1;
       }
 
       /* Pipeline stage badge */
@@ -239,12 +253,12 @@
       .confirm-overlay {
         position: fixed; inset: 0; z-index: 9998;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(5,5,15,0.6); backdrop-filter: blur(8px);
+        background: rgba(15,23,42,0.4); backdrop-filter: blur(8px);
       }
       .confirm-box {
-        background: var(--dark2); border: 1px solid var(--border);
+        background: #ffffff; border: 1px solid #e2e8f0;
         border-radius: 16px; padding: 1.5rem;
-        max-width: 400px; width: 90%; box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+        max-width: 400px; width: 90%; box-shadow: 0 12px 40px rgba(99,102,241,0.16);
       }
 
       /* View toggle buttons */
@@ -254,28 +268,110 @@
         cursor: pointer; border: 1px solid transparent;
       }
       .view-toggle-active {
-        background: var(--glass); border-color: var(--primary);
-        color: var(--primary-light); box-shadow: 0 0 8px rgba(99,102,241,0.2);
+        background: #eef2ff; border-color: var(--primary);
+        color: var(--primary); box-shadow: 0 0 8px rgba(99,102,241,0.15);
       }
-      .view-toggle-inactive { color: var(--text-muted); }
-      .view-toggle-inactive:hover { color: var(--text-main); background: var(--glass); }
+      .view-toggle-inactive { color: #64748b; }
+      .view-toggle-inactive:hover { color: var(--primary); background: #eef2ff; }
+
+      .dashboard-hero {
+        border: 1px solid rgba(99,102,241,0.25);
+        background: linear-gradient(140deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.07) 50%, rgba(34,211,238,0.06) 100%);
+        box-shadow: 0 4px 24px rgba(99,102,241,0.1);
+      }
+
+      .kpi-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        box-shadow: 0 1px 4px rgba(99,102,241,0.06);
+      }
+      .kpi-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--accent2), var(--accent));
+        pointer-events: none;
+      }
+      .kpi-card:hover {
+        transform: translateY(-2px);
+        border-color: #c7d2fe;
+        box-shadow: 0 6px 20px rgba(99,102,241,0.12);
+      }
+
+      .sessions-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fafc !important;
+      }
+
+      .sessions-table tbody tr:nth-child(even) {
+        background: #f8fafc;
+      }
+
+      .sessions-table tbody tr:hover {
+        background: #eef2ff !important;
+      }
+
+      /* Gradient text utility for headings */
+      .text-gradient {
+        background: linear-gradient(135deg, var(--primary), var(--accent2), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* Score breakdown bars — smooth fill animation on modal open */
+      .score-bar-fill {
+          transition: width 0.6s ease-out;
+      }
+
+      /* Signal badge base */
+      .signal-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          border-radius: 9999px;
+          padding: 2px 8px;
+          white-space: nowrap;
+      }
+
+      /* Knockout banner */
+      .knockout-hard {
+          background: rgba(127, 29, 29, 0.3);
+          border: 1px solid rgb(185, 28, 28);
+          border-radius: 8px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+      }
+      .knockout-soft {
+          background: rgba(120, 53, 15, 0.3);
+          border: 1px solid rgb(180, 83, 9);
+          border-radius: 8px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+      }
     </style>
   </head>
-  <body class="h-full bg-blue-50 text-slate-900 antialiased">
+  <body class="h-full bg-white text-slate-900 antialiased">
 
     <!-- =========================================================
          TOP NAVIGATION
     ========================================================= -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <header class="sticky top-0 z-40">
       <div class="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
         <!-- Logo + Breadcrumb -->
         <div class="flex items-center gap-3">
           <div class="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
             <i data-lucide="zap" class="w-4 h-4 text-blue-200"></i>
           </div>
-          <span class="font-semibold text-slate-900 tracking-tight text-sm">LoqATS</span>
-          <span class="text-slate-300 font-thin select-none">/</span>
-          <span class="text-slate-500 text-sm" id="nav-breadcrumb">Dashboard</span>
+          <span class="font-semibold nav-brand tracking-tight text-sm">LoqATS</span>
+          <span class="nav-crumb-sep font-thin select-none">/</span>
+          <span class="nav-crumb text-sm" id="nav-breadcrumb">Dashboard</span>
         </div>
         <!-- Right side: status pill + user email + logout -->
         <div class="flex items-center gap-3">
@@ -287,10 +383,10 @@
             <span id="ai-health-label" class="text-xs font-medium text-emerald-700">AI Engine Active</span>
           </div>
           <!-- User info + logout -->
-          <span id="nav-user-email" class="text-xs text-slate-400 hidden sm:block"></span>
+          <span id="nav-user-email" class="text-xs nav-email hidden sm:block"></span>
           <button
             onclick="Auth.logout()"
-            class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-all"
+            class="nav-signout inline-flex items-center gap-1.5 text-xs font-medium border px-3 py-1.5 rounded-lg transition-all"
           >
             <i data-lucide="log-out" class="w-3 h-3"></i>
             Sign out
@@ -307,33 +403,36 @@
     ========================================================= -->
     <div id="view-dashboard" class="view max-w-screen-xl mx-auto w-full px-6 py-8">
 
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 class="text-2xl font-semibold text-slate-900">Recruiter Dashboard</h1>
-          <p class="text-slate-500 text-sm mt-1">AI-powered multi-stage candidate screening pipeline</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            onclick="refreshJobAnalytics().then(() => renderMetrics().then(() => { renderSessionsTable(); lucide.createIcons(); }))"
-            class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-sm font-medium px-3 py-2.5 rounded-lg transition-colors"
-            title="Refresh analytics"
-          >
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-          </button>
-          <button
-            onclick="openJobModal()"
-            class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
-          >
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            Create Job Posting
-          </button>
-          <button
-            onclick="openModal()"
-            class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-            Bulk Screen
-          </button>
+      <div class="dashboard-hero rounded-2xl px-5 py-5 sm:px-6 sm:py-6 mb-8">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-semibold text-gradient">Recruiter Dashboard</h1>
+            <p class="text-slate-400 text-sm mt-1">Track jobs, monitor candidate quality, and move faster through pipeline decisions.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              onclick="refreshJobAnalytics().then(() => renderMetrics().then(() => { renderSessionsTable(); lucide.createIcons(); }))"
+              class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-sm font-medium px-3 py-2.5 rounded-lg transition-colors"
+              title="Refresh analytics"
+            >
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              Refresh
+            </button>
+            <button
+              onclick="openJobModal()"
+              class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 active:bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-sm"
+            >
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              Create Job Posting
+            </button>
+            <button
+              onclick="openModal()"
+              class="inline-flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              Bulk Screen
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1127,7 +1226,7 @@
         }
 
         document.getElementById("metrics-grid").innerHTML = cards.map(c => `
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-5 hover:shadow-md transition-shadow duration-200">
+          <div class="kpi-card rounded-xl shadow-sm px-5 py-5 transition-all duration-200">
             <div class="flex items-start justify-between mb-4">
               <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">${c.label}</p>
               <div class="w-8 h-8 rounded-lg ${c.iconBg} flex items-center justify-center flex-shrink-0 ml-2">
@@ -1136,6 +1235,9 @@
             </div>
             <div class="text-3xl font-bold text-slate-900 tracking-tight">${c.value}</div>
             <p class="text-xs text-slate-400 mt-1.5">${c.sub}</p>
+            <div class="mt-4 h-1 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full rounded-full" style="width: 72%; background: linear-gradient(90deg, var(--primary), var(--accent));"></div>
+            </div>
           </div>`).join("");
       }
 
@@ -1195,8 +1297,8 @@
         }
 
         container.innerHTML = `
-          <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px]">
+          <div class="overflow-x-auto max-h-[70vh]">
+            <table class="sessions-table w-full min-w-[900px]">
               <thead>
                 <tr class="border-b border-slate-100 bg-slate-50/80">
                   <th class="text-left text-xs font-semibold text-slate-500 px-6 py-3 uppercase tracking-wide">Job Title</th>
@@ -1378,11 +1480,18 @@
       }
 
       function getCandidateStatus(candidate) {
-        const explicit = (candidate.status || "").toLowerCase();
-        if (["shortlisted", "review", "rejected"].includes(explicit)) return explicit;
+        // Trust the backend bucket value directly.
+        // Backend assign_bucket() is authoritative — do not re-derive on frontend.
+        if (candidate.status) {
+            const s = candidate.status.toLowerCase();
+            if (s === "shortlisted") return "shortlisted";
+            if (s === "needs review" || s === "review") return "review";
+            if (s === "rejected" || s === "knockout") return "rejected";
+        }
+        // Fallback only if backend sends nothing
         const score = Number(candidate.match_score || 0);
-        if (score >= 80) return "shortlisted";
-        if (score >= 60) return "review";
+        if (score >= 70) return "shortlisted";
+        if (score >= 45) return "review";
         return "rejected";
       }
 
@@ -1495,6 +1604,188 @@
         lucide.createIcons();
       }
 
+      // ── New scoring display helpers ──────────────────────────────────────
+      function renderTableScoreBreakdown(candidate) {
+          const bd = candidate.score_breakdown;
+          const flags = candidate.knockout_flags || [];
+          const hardKnockout = flags.some(f => f.severity === "hard");
+
+          if (!bd) {
+              if (hardKnockout) {
+                  const reason = flags.find(f => f.severity === "hard")?.reason || "Knockout filter triggered";
+                  return `<span class="text-xs italic text-red-400" title="${escapeHtml(reason)}">⛔ knocked out</span>`;
+              }
+              return `<span class="text-xs italic text-slate-300">Processing...</span>`;
+          }
+
+          const bars = [
+              { label: "Exp",    score: bd.experience?.total   ?? 0, max: 25, color: "bg-blue-400" },
+              { label: "Skills", score: bd.skills?.total        ?? 0, max: 35, color: "bg-violet-400" },
+              { label: "Edu",    score: bd.education?.total     ?? 0, max: 15, color: "bg-amber-400" },
+              { label: "Role",   score: bd.role_level?.total    ?? 0, max: 10, color: "bg-teal-400" },
+              { label: "App",    score: bd.application_quality?.total ?? 0, max: 15, color: "bg-pink-400" },
+          ];
+
+          return `<div class="flex flex-col gap-0.5 min-w-[160px]">` + bars.map(b => {
+              const pct = Math.round((b.score / b.max) * 100);
+              return `
+                  <div class="flex items-center gap-1" title="${b.label}: ${b.score}/${b.max}">
+                      <span class="text-xs text-slate-400 w-9 text-right flex-shrink-0">${b.label}</span>
+                      <div class="flex-1 bg-slate-100 rounded-full h-1.5" style="min-width:60px">
+                          <div class="${b.color} h-1.5 rounded-full transition-all duration-500" style="width:${pct}%"></div>
+                      </div>
+                      <span class="text-xs font-mono font-semibold text-slate-600 w-10 text-right flex-shrink-0">${b.score}/${b.max}</span>
+                  </div>`;
+          }).join("") + `</div>`;
+      }
+
+      function renderSignalBadges(candidate, compact) {
+          const signals = candidate.candidate_signals || [];
+          if (!signals.length) return "";
+          const colorMap = {
+              green:  "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+              yellow: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+              red:    "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20",
+              grey:   "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-400/20",
+          };
+          return signals.map(s => {
+              const cls = colorMap[s.color] || colorMap.grey;
+              const size = compact ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2 py-1";
+              return `<span class="${cls} ${size} rounded-full whitespace-nowrap inline-flex items-center" title="${escapeHtml(s.label)}">${escapeHtml(s.label)}</span>`;
+          }).join(" ");
+      }
+
+      function renderKnockoutBanner(candidate, compact) {
+          const flags = candidate.knockout_flags || [];
+          const hard = flags.filter(f => f.severity === "hard");
+          const soft = flags.filter(f => f.severity === "soft");
+          if (!hard.length && !soft.length) return "";
+
+          if (compact) {
+              const first = hard[0] || soft[0];
+              const icon = hard.length ? "⛔" : "⚠️";
+              const cls = hard.length ? "text-red-500" : "text-amber-500";
+              return `<div class="text-xs ${cls} mt-0.5 truncate" title="${escapeHtml(first.reason)}">${icon} ${escapeHtml(first.reason)}</div>`;
+          }
+
+          let html = "";
+          if (hard.length) {
+              html += `<div class="knockout-hard">
+                  <div class="text-red-500 font-semibold text-sm mb-1">⛔ Hard Knockout${hard.length > 1 ? "s" : ""}</div>
+                  ${hard.map(f => `<div class="text-red-400 text-xs mt-1">• ${escapeHtml(f.reason)}</div>`).join("")}
+              </div>`;
+          }
+          if (soft.length) {
+              html += `<div class="knockout-soft">
+                  <div class="text-amber-500 font-semibold text-sm mb-1">⚠️ Soft Flag${soft.length > 1 ? "s" : ""}</div>
+                  ${soft.map(f => `<div class="text-amber-400 text-xs mt-1">• ${escapeHtml(f.reason)}</div>`).join("")}
+              </div>`;
+          }
+          return html;
+      }
+
+      function renderDetailScoreCard(candidate) {
+          const bd = candidate.score_breakdown;
+          const flags = candidate.knockout_flags || [];
+          const hardKnockout = flags.some(f => f.severity === "hard");
+          const score = candidate.match_score ?? 0;
+
+          const ringColor = hardKnockout ? "text-red-500"
+              : score >= 70 ? "text-emerald-600"
+              : score >= 45 ? "text-amber-600"
+              : "text-red-500";
+
+          let html = `
+              <div class="flex items-center justify-between mb-4">
+                  <div>
+                      <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Match Score</div>
+                      <div class="font-mono font-bold text-4xl ${ringColor}">${score}<span class="text-slate-400 text-lg">/100</span></div>
+                  </div>
+                  <div class="text-right">
+                      ${hardKnockout ? '<div class="text-red-500 text-sm font-semibold">⛔ Hard Knockout</div>' : ""}
+                      <div class="text-slate-400 text-xs mt-1">${escapeHtml(candidate.pipeline_stage || "Applied")}</div>
+                  </div>
+              </div>`;
+
+          html += renderKnockoutBanner(candidate, false);
+
+          if (bd) {
+              const components = [
+                  { label: "Experience",   total: bd.experience?.total ?? 0,             max: 25, color: "bg-blue-500",   detail: `${bd.experience?.total_exp ?? 0} career + ${bd.experience?.domain_exp ?? 0} domain` },
+                  { label: "Skills",       total: bd.skills?.total ?? 0,                 max: 35, color: "bg-violet-500", detail: `${bd.skills?.required ?? 0} required + ${bd.skills?.nice_to_have ?? 0} bonus + ${bd.skills?.depth_recency ?? 0} depth` },
+                  { label: "Education",    total: bd.education?.total ?? 0,              max: 15, color: "bg-amber-500",  detail: `${bd.education?.degree ?? 0} degree + ${bd.education?.field_relevance ?? 0} field` },
+                  { label: "Role Level",   total: bd.role_level?.total ?? 0,             max: 10, color: "bg-teal-500",   detail: `Seniority alignment` },
+                  { label: "Application",  total: bd.application_quality?.total ?? 0,    max: 15, color: "bg-pink-500",   detail: `CL: ${bd.application_quality?.cover_letter ?? 0} · Portfolio: ${bd.application_quality?.portfolio ?? 0} · LinkedIn: ${bd.application_quality?.linkedin ?? 0} · Q&A: ${bd.application_quality?.custom_answers ?? 0}` },
+              ];
+
+              html += `<div class="space-y-3 mb-4">`;
+              components.forEach(comp => {
+                  const pct = Math.round((comp.total / comp.max) * 100);
+                  html += `
+                      <div>
+                          <div class="flex justify-between text-xs mb-1">
+                              <span class="text-slate-300 font-medium">${comp.label}</span>
+                              <span class="text-slate-400 tabular-nums">${comp.total} / ${comp.max}</span>
+                          </div>
+                          <div class="bg-slate-600/30 rounded-full h-2">
+                              <div class="${comp.color} h-2 rounded-full score-bar-fill" style="width:${pct}%"></div>
+                          </div>
+                          <div class="text-slate-500 text-xs mt-0.5">${comp.detail}</div>
+                      </div>`;
+              });
+              html += `</div>`;
+
+              const matched = bd.skills?.matched_required || [];
+              const missing = bd.skills?.missing_required || [];
+              if (matched.length || missing.length) {
+                  html += `<div class="border-t border-slate-700/50 pt-3 mt-3">
+                      <div class="text-slate-400 text-xs uppercase tracking-wider mb-2">Skills Detail</div>`;
+                  if (matched.length) {
+                      html += `<div class="mb-2">
+                          <div class="text-emerald-500 text-xs font-medium mb-1">✓ Matched (${matched.length})</div>
+                          <div class="flex flex-wrap gap-1">
+                              ${matched.map(s => `<span class="bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 text-xs px-2 py-0.5 rounded-full">${escapeHtml(s)}</span>`).join("")}
+                          </div>
+                      </div>`;
+                  }
+                  if (missing.length) {
+                      html += `<div>
+                          <div class="text-red-500 text-xs font-medium mb-1">✗ Missing (${missing.length})</div>
+                          <div class="flex flex-wrap gap-1">
+                              ${missing.map(s => `<span class="bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20 text-xs px-2 py-0.5 rounded-full">${escapeHtml(s)}</span>`).join("")}
+                          </div>
+                      </div>`;
+                  }
+                  html += `</div>`;
+              }
+          } else {
+              html += `<div class="text-slate-400 text-sm italic">Score breakdown not available</div>`;
+          }
+          return html;
+      }
+
+      function renderDetailSignals(candidate) {
+          const signals = candidate.candidate_signals || [];
+          if (!signals.length) return "";
+          const colorMap = {
+              green:  "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
+              yellow: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+              red:    "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20",
+              grey:   "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-400/20",
+          };
+          const badges = signals.map(s => {
+              const cls = colorMap[s.color] || colorMap.grey;
+              return `<span class="${cls} text-xs px-2 py-1 rounded-full inline-flex items-center">${escapeHtml(s.label)}</span>`;
+          }).join("");
+          return `
+              <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 mb-4">
+                  <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Candidate Signals</div>
+                  <div class="flex flex-wrap gap-2">${badges}</div>
+              </div>`;
+      }
+
+      // ── End new scoring display helpers ─────────────────────────────────────
+
       function renderCandidateRow(c) {
         const score = c.match_score || 0;
         const normalizedStatus = getCandidateStatus(c);
@@ -1519,27 +1810,14 @@
         const skillTags = skills.map(s => `<span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">${escapeHtml(s)}</span>`).join("");
         const moreSkills = skillsArr.length > 4 ? `<span class="text-xs text-slate-400">+${skillsArr.length - 4} more</span>` : "";
 
-        // Score breakdown from deterministic pipeline
-        const bd = c.breakdown;
+        // 5-component score breakdown
+        const aiScoresHtml = renderTableScoreBreakdown(c);
 
-        function miniBar(label, val, max, colorClass) {
-          const pct = max > 0 ? Math.round((val / max) * 100) : 0;
-          return `<div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400 w-9 flex-shrink-0">${label}</span>
-            <div class="flex-1 bg-slate-100 rounded-full h-1.5 min-w-[50px]">
-              <div class="h-full rounded-full ${colorClass} transition-all duration-500" style="width:${pct}%"></div>
-            </div>
-            <span class="text-xs font-mono font-semibold text-slate-600 w-12 text-right flex-shrink-0">${val}/${max}</span>
-          </div>`;
-        }
+        // Knockout banner (compact)
+        const knockoutHtml = renderKnockoutBanner(c, true);
 
-        const aiScoresHtml = bd
-          ? `<div class="flex flex-col gap-1.5 min-w-[160px]">
-              ${miniBar("Skills", bd.skills || 0, 40, "bg-blue-500")}
-              ${miniBar("Exp",    bd.experience || 0, 40, "bg-indigo-400")}
-              ${miniBar("Edu",    bd.education || 0, 20, "bg-amber-400")}
-            </div>`
-          : `<span class="text-xs text-slate-300 italic">knocked out</span>`;
+        // Signal badges (compact)
+        const signalHtml = renderSignalBadges(c, true);
 
         return `
           <tr class="candidate-row border-b border-slate-50 last:border-0" ${c.id ? `onclick="openCandidateDetail(${c.id})" style="cursor:pointer"` : ''}>
@@ -1553,6 +1831,7 @@
                 ${c.cover_letter ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-900/60 text-violet-300 ring-1 ring-inset ring-violet-500/30">CL</span>` : ""}
               </div>
               <div class="text-xs text-slate-400 mt-0.5">${escapeHtml(c.email || "")}</div>
+              ${knockoutHtml}
               ${skills.length > 0 ? `<div class="flex flex-wrap items-center gap-1 mt-2">${skillTags}${moreSkills}</div>` : ""}
             </td>
             <td class="px-4 py-4 whitespace-nowrap">
@@ -1567,6 +1846,7 @@
                 </div>
                 <span class="text-sm font-bold font-mono ${scoreColor} w-8 text-right flex-shrink-0">${score}</span>
               </div>
+              ${signalHtml ? `<div class="flex flex-wrap gap-1 mt-1">${signalHtml}</div>` : ""}
               ${getStageBadgeHtml(c.pipeline_stage)}
             </td>
             <td class="px-4 py-4">${aiScoresHtml}</td>
@@ -2859,25 +3139,6 @@
           statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Rejected</span>`;
         }
 
-        const bd = c.breakdown;
-        function miniBar(label, val, max, colorClass) {
-          const pct = max > 0 ? Math.round((val / max) * 100) : 0;
-          return `<div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400 w-12 flex-shrink-0">${label}</span>
-            <div class="flex-1 bg-slate-100 rounded-full h-1.5">
-              <div class="h-full rounded-full ${colorClass}" style="width:${pct}%"></div>
-            </div>
-            <span class="text-xs font-mono font-semibold text-slate-600 w-12 text-right">${val}/${max}</span>
-          </div>`;
-        }
-
-        const breakdownHtml = bd ? `
-          <div class="space-y-2">
-            ${miniBar("Skills", bd.skills || 0, 40, "bg-blue-500")}
-            ${miniBar("Exp", bd.experience || 0, 40, "bg-indigo-400")}
-            ${miniBar("Edu", bd.education || 0, 20, "bg-amber-400")}
-          </div>` : "";
-
         const skillsArr = getCandidateSkillList(c);
         const skillTags = skillsArr.map(s => `<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">${escapeHtml(s)}</span>`).join("");
         const screeningAnswers = Array.isArray(c.custom_answers) ? c.custom_answers : [];
@@ -2899,14 +3160,15 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div class="grid grid-cols-1 gap-4 mb-6">
             <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Match Score</span>
-                <span class="text-2xl font-bold ${status === 'shortlisted' ? 'text-emerald-600' : status === 'review' ? 'text-amber-600' : 'text-red-500'}">${score}</span>
-              </div>
-              ${breakdownHtml}
+              ${renderDetailScoreCard(c)}
             </div>
+          </div>
+
+          ${renderDetailSignals(c)}
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
               <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Details</div>
               <div class="space-y-2 text-sm">

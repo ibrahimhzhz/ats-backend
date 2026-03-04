@@ -147,6 +147,28 @@ class Applicant(Base):
     portfolio_url = Column(String, nullable=True)
     custom_answers = Column(JSON, nullable=True)  # [{question: str, answer: str}]
 
+    # Enriched extraction storage
+    skills_detailed = Column(JSON, nullable=True)        # [{name, years_used, last_used_year, job_index}]
+    extracted_jobs = Column(JSON, nullable=True)          # [{title, company, start_year, end_year, is_current, domain, work_type}]
+    extracted_education = Column(JSON, nullable=True)     # [{degree, field_of_study, institution, year}]
+
+    # Candidate signal fields (from extraction)
+    has_measurable_impact = Column(Boolean, nullable=True, default=None)
+    has_contact_info = Column(Boolean, nullable=True, default=None)
+    has_clear_job_titles = Column(Boolean, nullable=True, default=None)
+    employment_gaps = Column(Boolean, nullable=True, default=None)
+    average_tenure_years = Column(Float, nullable=True, default=None)
+    extractable_text = Column(Boolean, nullable=True, default=True)
+
+    # Cover letter and custom answer analysis from extraction
+    cover_letter_analysis = Column(JSON, nullable=True)  # {word_count, mentions_role_title, skills_mentioned, ...}
+    custom_answer_analysis = Column(JSON, nullable=True)  # [{question_index, relevance, detail_level, flags}]
+
+    # Score breakdown storage (populated by scoring engine)
+    score_breakdown = Column(JSON, nullable=True)        # {experience, skills, education, role_level, application_quality}
+    knockout_flags = Column(JSON, nullable=True)          # [{type, severity, reason}]
+    candidate_signals = Column(JSON, nullable=True)       # [{type, level, color}]
+
     # Hiring Pipeline
     pipeline_stage = Column(String, default="Applied", nullable=False)  # See PIPELINE_STAGES
     stage_updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

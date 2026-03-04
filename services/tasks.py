@@ -9,9 +9,16 @@ from sqlalchemy.exc import IntegrityError
 import models
 from core.celery_app import celery_app
 from database import SessionLocal
-from services.ai_engine import extract_candidate_facts, calculate_deterministic_score, extract_jd_requirements
-from services.ai_engine import evaluate_knockout_filters, normalize_job_requirements
+from services.ai_engine import extract_candidate_facts, extract_jd_requirements
+from services.ai_engine import normalize_job_requirements
 from services.pdf_parser import extract_text_from_pdf
+from scoring import (
+    calculate_deterministic_score,
+    evaluate_knockout_filters,
+    generate_candidate_signals,
+    assign_bucket,
+    bucket_to_status,
+)
 
 
 def _advance_job_progress(db, job_id: int, company_id: int):
@@ -160,28 +167,65 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 extract_candidate_facts(resume_text, normalized_requirements)
             )
 
-            knockout_result = evaluate_knockout_filters(
-                candidate=candidate_data,
-                required_skills=job.required_skills or [],
-                min_experience=float(job.min_experience or 0),
-                job_title=job.title or "",
-                job_requirements=normalized_requirements,
+            # ── Build job config for scoring ──────────────────────────────
+            effective_min_exp = (
+                normalized_requirements.get("minimum_years_experience", 0)
+                if normalized_requirements.get("minimum_years_experience", 0) > 0
+                else float(job.min_experience or 0)
+            )
+            job_config: Dict[str, Any] = {
+                "title": job.title or "",
+                "min_experience": effective_min_exp,
+                "required_skills": normalized_requirements.get("must_have_skills") or job.required_skills or [],
+                "nice_to_have_skills": job.nice_to_have_skills or [],
+                "required_education": normalized_requirements.get("education_requirement") or "bachelor",
+                "department": job.department,
+                "require_cover_letter": job.require_cover_letter or False,
+                "require_portfolio": job.require_portfolio or False,
+                "require_linkedin": job.require_linkedin or False,
+                "custom_questions": job.custom_questions or [],
+                "work_location_type": job.work_location_type,
+                "application_deadline": job.application_deadline,
+                "offers_visa_sponsorship": normalized_requirements.get("offers_visa_sponsorship"),
+            }
+
+            # ── Score ─────────────────────────────────────────────────────
+            total_score, score_breakdown = calculate_deterministic_score(
+                candidate_data, job_config,
             )
 
-            result = calculate_deterministic_score(
-                candidate=candidate_data,
-                required_skills=job.required_skills or [],
-                min_experience=float(job.min_experience or 0),
-                job_title=job.title or "",
-                raw_resume_text=resume_text,
-                job_requirements=normalized_requirements,
+            # ── Knockout ──────────────────────────────────────────────────
+            knockout_flags = evaluate_knockout_filters(
+                candidate_data, job_config,
             )
+            has_hard_knockout = any(
+                f["severity"] == "hard" for f in knockout_flags
+            )
+            if has_hard_knockout:
+                total_score = 0
 
-            candidate_status = result["status"]
-            candidate_summary = result["summary"]
-            if knockout_result["knockout"]:
-                candidate_status = "knockout"
-                candidate_summary = f"Knockout: {knockout_result['reason']} {result['summary']}"
+            # ── Signals & bucket ──────────────────────────────────────────
+            candidate_signals = generate_candidate_signals(candidate_data)
+            bucket = assign_bucket(total_score, has_hard_knockout)
+            candidate_status = bucket_to_status(bucket, has_hard_knockout)
+
+            # ── Summary ───────────────────────────────────────────────────
+            matched = score_breakdown["skills"].get("matched_required", [])
+            missing = score_breakdown["skills"].get("missing_required", [])
+            candidate_summary = (
+                f"Score {total_score}/100. "
+                f"Experience {score_breakdown['experience']['total']}/25, "
+                f"Skills {score_breakdown['skills']['total']}/35 "
+                f"({len(matched)} matched, {len(missing)} missing), "
+                f"Education {score_breakdown['education']['total']}/15, "
+                f"Role fit {score_breakdown['role_level']['total']}/10, "
+                f"Application {score_breakdown['application_quality']['total']}/15."
+            )
+            if has_hard_knockout:
+                reasons = "; ".join(
+                    f["reason"] for f in knockout_flags if f["severity"] == "hard"
+                )
+                candidate_summary = f"Knockout: {reasons}. {candidate_summary}"
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -193,10 +237,26 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 resume_pdf=pdf_bytes,
                 years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
-                match_score=result["final_score"],
+                match_score=total_score,
                 summary=candidate_summary,
                 status=candidate_status,
-                breakdown=result.get("breakdown"),
+                breakdown=score_breakdown,
+                # Enriched extraction fields
+                skills_detailed=candidate_data.get("skills_detailed"),
+                extracted_jobs=candidate_data.get("jobs"),
+                extracted_education=candidate_data.get("education"),
+                has_measurable_impact=candidate_data.get("has_measurable_impact"),
+                has_contact_info=candidate_data.get("has_contact_info"),
+                has_clear_job_titles=candidate_data.get("has_clear_job_titles"),
+                employment_gaps=candidate_data.get("employment_gaps"),
+                average_tenure_years=candidate_data.get("average_tenure_years"),
+                extractable_text=candidate_data.get("extractable_text", True),
+                cover_letter_analysis=candidate_data.get("cover_letter_analysis"),
+                custom_answer_analysis=candidate_data.get("custom_answer_analysis"),
+                # Score fields
+                score_breakdown=score_breakdown,
+                knockout_flags=knockout_flags,
+                candidate_signals=candidate_signals,
             )
             db.add(applicant)
             db.commit()
@@ -269,28 +329,70 @@ def process_public_resume(
             if submitted_phone and submitted_phone.strip():
                 candidate_data["phone"] = submitted_phone.strip()
 
-            result = calculate_deterministic_score(
-                candidate=candidate_data,
-                required_skills=job.required_skills or [],
-                min_experience=float(job.min_experience or 0),
-                job_title=job.title or "",
-                raw_resume_text=resume_text,
-                job_requirements=normalized_requirements,
+            # Merge form-submission fields so scoring/signals can see them
+            candidate_data["cover_letter"] = cover_letter
+            candidate_data["portfolio_url"] = portfolio_url
+            candidate_data["linkedin_url"] = linkedin_url
+
+            # ── Build job config for scoring ──────────────────────────────
+            effective_min_exp = (
+                normalized_requirements.get("minimum_years_experience", 0)
+                if normalized_requirements.get("minimum_years_experience", 0) > 0
+                else float(job.min_experience or 0)
+            )
+            job_config: Dict[str, Any] = {
+                "title": job.title or "",
+                "min_experience": effective_min_exp,
+                "required_skills": normalized_requirements.get("must_have_skills") or job.required_skills or [],
+                "nice_to_have_skills": job.nice_to_have_skills or [],
+                "required_education": normalized_requirements.get("education_requirement") or "bachelor",
+                "department": job.department,
+                "require_cover_letter": job.require_cover_letter or False,
+                "require_portfolio": job.require_portfolio or False,
+                "require_linkedin": job.require_linkedin or False,
+                "custom_questions": job.custom_questions or [],
+                "work_location_type": job.work_location_type,
+                "application_deadline": job.application_deadline,
+                "offers_visa_sponsorship": normalized_requirements.get("offers_visa_sponsorship"),
+            }
+
+            # ── Score ─────────────────────────────────────────────────────
+            total_score, score_breakdown = calculate_deterministic_score(
+                candidate_data, job_config,
             )
 
-            knockout_result = evaluate_knockout_filters(
-                candidate=candidate_data,
-                required_skills=job.required_skills or [],
-                min_experience=float(job.min_experience or 0),
-                job_title=job.title or "",
-                job_requirements=normalized_requirements,
+            # ── Knockout ──────────────────────────────────────────────────
+            knockout_flags = evaluate_knockout_filters(
+                candidate_data, job_config,
             )
+            has_hard_knockout = any(
+                f["severity"] == "hard" for f in knockout_flags
+            )
+            if has_hard_knockout:
+                total_score = 0
 
-            candidate_status = result["status"]
-            candidate_summary = result["summary"]
-            if knockout_result["knockout"]:
-                candidate_status = "knockout"
-                candidate_summary = f"Knockout: {knockout_result['reason']} {result['summary']}"
+            # ── Signals & bucket ──────────────────────────────────────────
+            candidate_signals = generate_candidate_signals(candidate_data)
+            bucket = assign_bucket(total_score, has_hard_knockout)
+            candidate_status = bucket_to_status(bucket, has_hard_knockout)
+
+            # ── Summary ───────────────────────────────────────────────────
+            matched = score_breakdown["skills"].get("matched_required", [])
+            missing = score_breakdown["skills"].get("missing_required", [])
+            candidate_summary = (
+                f"Score {total_score}/100. "
+                f"Experience {score_breakdown['experience']['total']}/25, "
+                f"Skills {score_breakdown['skills']['total']}/35 "
+                f"({len(matched)} matched, {len(missing)} missing), "
+                f"Education {score_breakdown['education']['total']}/15, "
+                f"Role fit {score_breakdown['role_level']['total']}/10, "
+                f"Application {score_breakdown['application_quality']['total']}/15."
+            )
+            if has_hard_knockout:
+                reasons = "; ".join(
+                    f["reason"] for f in knockout_flags if f["severity"] == "hard"
+                )
+                candidate_summary = f"Knockout: {reasons}. {candidate_summary}"
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -302,14 +404,30 @@ def process_public_resume(
                 resume_pdf=pdf_bytes,
                 years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
-                match_score=result["final_score"],
+                match_score=total_score,
                 summary=candidate_summary,
                 status=candidate_status,
-                breakdown=result.get("breakdown"),
+                breakdown=score_breakdown,
                 cover_letter=cover_letter,
                 linkedin_url=linkedin_url,
                 portfolio_url=portfolio_url,
                 custom_answers=custom_answers,
+                # Enriched extraction fields
+                skills_detailed=candidate_data.get("skills_detailed"),
+                extracted_jobs=candidate_data.get("jobs"),
+                extracted_education=candidate_data.get("education"),
+                has_measurable_impact=candidate_data.get("has_measurable_impact"),
+                has_contact_info=candidate_data.get("has_contact_info"),
+                has_clear_job_titles=candidate_data.get("has_clear_job_titles"),
+                employment_gaps=candidate_data.get("employment_gaps"),
+                average_tenure_years=candidate_data.get("average_tenure_years"),
+                extractable_text=candidate_data.get("extractable_text", True),
+                cover_letter_analysis=candidate_data.get("cover_letter_analysis"),
+                custom_answer_analysis=candidate_data.get("custom_answer_analysis"),
+                # Score fields
+                score_breakdown=score_breakdown,
+                knockout_flags=knockout_flags,
+                candidate_signals=candidate_signals,
             )
             db.add(applicant)
             db.flush()

@@ -16,10 +16,29 @@ Each returns a dict:
 import uuid
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from main import app
-from database import SessionLocal
+from database import Base, get_db
 import models
+
+# ─── isolated in-memory test database ─────────────────────────────────────────
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+_test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+)
+_TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_test_engine)
+
+
+def _override_get_db():
+    db = _TestSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -64,18 +83,17 @@ def _auth_headers(tenant: dict) -> dict:
 
 @pytest.fixture(scope="session")
 def client():
-    db = SessionLocal()
-    try:
-        db.query(models.Applicant).delete()
-        db.query(models.Job).delete()
-        db.query(models.User).delete()
-        db.query(models.Company).delete()
-        db.commit()
-    finally:
-        db.close()
+    # Create all tables in the isolated in-memory database
+    Base.metadata.create_all(bind=_test_engine)
+    # Override the DB dependency so the app uses the test DB, not ats.db
+    app.dependency_overrides[get_db] = _override_get_db
 
     with TestClient(app) as test_client:
         yield test_client
+
+    # Teardown: drop all tables and remove the override
+    Base.metadata.drop_all(bind=_test_engine)
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture(scope="session")

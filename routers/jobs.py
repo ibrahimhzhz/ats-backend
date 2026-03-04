@@ -262,6 +262,48 @@ def toggle_job_status(
     return job
 
 
+@router.get("/dashboard/stats", response_model=schemas.DashboardStatsResponse)
+def get_dashboard_statistics(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Get overall dashboard statistics for the authenticated user's company."""
+    # Job statistics
+    jobs = db.query(models.Job).filter(
+        models.Job.company_id == current_user.company_id
+    ).all()
+    
+    total_jobs = len(jobs)
+    active_jobs = sum(1 for j in jobs if j.is_active)
+    
+    # Applicant statistics
+    applicants = db.query(models.Applicant).filter(
+        models.Applicant.company_id == current_user.company_id
+    ).all()
+    
+    total_applicants = len(applicants)
+    shortlisted_applicants = sum(1 for a in applicants if a.status == "shortlisted")
+    pending_review = sum(1 for a in applicants if a.status == "review")
+    
+    # Recent applicants (top 10 by score)
+    recent_applicants = (
+        db.query(models.Applicant)
+        .filter(models.Applicant.company_id == current_user.company_id)
+        .order_by(models.Applicant.match_score.desc())
+        .limit(10)
+        .all()
+    )
+    
+    return schemas.DashboardStatsResponse(
+        total_jobs=total_jobs,
+        active_jobs=active_jobs,
+        total_applicants=total_applicants,
+        shortlisted_applicants=shortlisted_applicants,
+        pending_review=pending_review,
+        recent_applicants=recent_applicants
+    )
+
+
 @router.get("/{job_id}/stats", response_model=schemas.JobStatsResponse)
 def get_job_statistics(
     job_id: int,
@@ -313,46 +355,4 @@ def get_job_statistics(
         interviewed=interviewed,
         hired=hired,
         average_score=round(average_score, 1)
-    )
-
-
-@router.get("/dashboard/stats", response_model=schemas.DashboardStatsResponse)
-def get_dashboard_statistics(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    """Get overall dashboard statistics for the authenticated user's company."""
-    # Job statistics
-    jobs = db.query(models.Job).filter(
-        models.Job.company_id == current_user.company_id
-    ).all()
-    
-    total_jobs = len(jobs)
-    active_jobs = sum(1 for j in jobs if j.is_active)
-    
-    # Applicant statistics
-    applicants = db.query(models.Applicant).filter(
-        models.Applicant.company_id == current_user.company_id
-    ).all()
-    
-    total_applicants = len(applicants)
-    shortlisted_applicants = sum(1 for a in applicants if a.status == "shortlisted")
-    pending_review = sum(1 for a in applicants if a.status == "review")
-    
-    # Recent applicants (top 10 by score)
-    recent_applicants = (
-        db.query(models.Applicant)
-        .filter(models.Applicant.company_id == current_user.company_id)
-        .order_by(models.Applicant.match_score.desc())
-        .limit(10)
-        .all()
-    )
-    
-    return schemas.DashboardStatsResponse(
-        total_jobs=total_jobs,
-        active_jobs=active_jobs,
-        total_applicants=total_applicants,
-        shortlisted_applicants=shortlisted_applicants,
-        pending_review=pending_review,
-        recent_applicants=recent_applicants
     )

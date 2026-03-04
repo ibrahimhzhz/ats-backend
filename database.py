@@ -95,6 +95,24 @@ def run_migrations():
         # Hiring Pipeline
         "ALTER TABLE applicants ADD COLUMN pipeline_stage TEXT DEFAULT 'Applied'",
         f"ALTER TABLE applicants ADD COLUMN stage_updated_at {datetime_type}",
+        # Enriched extraction storage
+        "ALTER TABLE applicants ADD COLUMN skills_detailed JSON",
+        "ALTER TABLE applicants ADD COLUMN extracted_jobs JSON",
+        "ALTER TABLE applicants ADD COLUMN extracted_education JSON",
+        # Candidate signal fields
+        "ALTER TABLE applicants ADD COLUMN has_measurable_impact BOOLEAN",
+        "ALTER TABLE applicants ADD COLUMN has_contact_info BOOLEAN",
+        "ALTER TABLE applicants ADD COLUMN has_clear_job_titles BOOLEAN",
+        "ALTER TABLE applicants ADD COLUMN employment_gaps BOOLEAN",
+        "ALTER TABLE applicants ADD COLUMN average_tenure_years REAL",
+        "ALTER TABLE applicants ADD COLUMN extractable_text BOOLEAN DEFAULT 1",
+        # Cover letter and custom answer analysis from extraction
+        "ALTER TABLE applicants ADD COLUMN cover_letter_analysis JSON",
+        "ALTER TABLE applicants ADD COLUMN custom_answer_analysis JSON",
+        # Score breakdown storage (populated by scoring engine)
+        "ALTER TABLE applicants ADD COLUMN score_breakdown JSON",
+        "ALTER TABLE applicants ADD COLUMN knockout_flags JSON",
+        "ALTER TABLE applicants ADD COLUMN candidate_signals JSON",
     ]
 
     def _is_already_exists_error(error_message: str) -> bool:
