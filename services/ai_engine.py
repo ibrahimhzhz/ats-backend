@@ -1,5 +1,7 @@
+from datetime import datetime
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig
+from vertexai.language_models import TextEmbeddingModel
 import json
 import os
 import asyncio
@@ -54,6 +56,7 @@ if credentials_path:
     print(f"✅ Using credentials from: {credentials_path}")
 
 _model = None
+_embedding_model = None
 _vertex_init_error = None
 
 
@@ -87,6 +90,25 @@ def _get_model():
     except Exception as exc:
         _vertex_init_error = f"Vertex AI initialization failed: {str(exc)}"
         print(f"⚠️ {_vertex_init_error}")
+        return None
+
+
+def _get_embedding_model():
+    """Lazy-init Vertex embedding model for semantic skill matching."""
+    global _embedding_model
+
+    if _embedding_model is not None:
+        return _embedding_model
+
+    # Reuse the same Vertex init path/error handling as the Gemini client.
+    if _get_model() is None:
+        return None
+
+    try:
+        _embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-004")
+        return _embedding_model
+    except Exception as exc:
+        logger.error("Vertex embedding model initialization failed: %s", exc)
         return None
 
 
@@ -125,6 +147,8 @@ class RateLimiter:
 
 # Global rate limiter instance (Vertex AI has higher limits, set to 60 calls per minute)
 rate_limiter = RateLimiter(calls_per_minute=60)
+EMBEDDING_BATCH_SIZE = 250
+SKILL_EMBEDDING_PREFIX = "Resume skill: "
 
 
 # --- 2. HELPER FUNCTIONS ---
@@ -145,6 +169,10 @@ def clean_json_string(text):
     return text
 
 
+EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+PHONE_PATTERN = re.compile(r"(?:\+?\d[\d\s().-]{7,}\d)")
+
+
 DEFAULT_JD_REQUIREMENTS: Dict[str, Any] = {
     "must_have_skills": [],
     "minimum_years_experience": 0.0,
@@ -156,9 +184,20 @@ DEFAULT_JD_REQUIREMENTS: Dict[str, Any] = {
 CANDIDATE_FACT_SCHEMA: Dict[str, Any] = {
     "type": "OBJECT",
     "properties": {
-        "total_years_experience": {
-            "type": "INTEGER",
-            "description": "Total years of professional work experience across all roles. Calculate from job dates, do not guess.",
+        "name": {
+            "type": "STRING",
+            "nullable": True,
+            "description": "Candidate full name exactly as written on the resume header. null if not present.",
+        },
+        "email": {
+            "type": "STRING",
+            "nullable": True,
+            "description": "Candidate email address as written in the resume. null if not present.",
+        },
+        "phone": {
+            "type": "STRING",
+            "nullable": True,
+            "description": "Candidate phone number as written in the resume. null if not present.",
         },
         "extractable_text": {
             "type": "BOOLEAN",
@@ -327,7 +366,7 @@ CANDIDATE_FACT_SCHEMA: Dict[str, Any] = {
         },
     },
     "required": [
-        "total_years_experience",
+        "name",
         "extractable_text",
         "requires_visa_sponsorship",
         "has_measurable_impact",
@@ -348,12 +387,13 @@ Rules you must follow without exception:
 1. Extract only facts that are explicitly stated or can be directly calculated from stated dates. Never infer, guess, or assume anything that is not written.
 2. Never evaluate, score, rank, or make any judgment about the candidate's quality, suitability, or skills. You are forbidden from producing any subjective assessment.
 3. If a piece of information is not present in the resume, return null for that field. Never fabricate data to fill a field.
-4. For the jobs array, list roles in reverse chronological order — most recent first. Index 0 is always the most recent role.
-5. For skills, extract every technical skill, tool, framework, language, and platform mentioned anywhere in the resume including job descriptions, skills sections, and project descriptions.
-6. For degree, map all variations to the canonical values: none, high school, associate, bachelor, master, phd.
-7. For domain, use your knowledge of the company to determine the industry domain. If the company is unknown or ambiguous, use "other".
-8. For work_type, only mark remote or hybrid if the resume explicitly states it. Otherwise use unknown.
-9. Return only the JSON object. No explanation, no preamble, no markdown formatting, no code fences."""
+4. Extract candidate name from document structure (header/contact block) instead of generic section titles like 'Curriculum Vitae' or 'Professional Summary'.
+5. For the jobs array, list roles in reverse chronological order — most recent first. Index 0 is always the most recent role.
+6. For skills, extract every technical skill, tool, framework, language, and platform mentioned anywhere in the resume including job descriptions, skills sections, and project descriptions.
+7. For degree, map all variations to the canonical values: none, high school, associate, bachelor, master, phd.
+8. For domain, use your knowledge of the company to determine the industry domain. If the company is unknown or ambiguous, use "other".
+9. For work_type, only mark remote or hybrid if the resume explicitly states it. Otherwise use unknown.
+10. Return only the JSON object. No explanation, no preamble, no markdown formatting, no code fences."""
 
 
 def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -375,6 +415,9 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
     if result["extractable_text"] is False:
         logger.warning("Extraction validation: extractable_text is False — resume not readable")
         return {
+            "name": "Unknown Candidate",
+            "email": None,
+            "phone": None,
             "extractable_text": False,
             "total_years_experience": 0,
             "requires_visa_sponsorship": False,
@@ -396,18 +439,35 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
             "custom_answer_analysis": [],
         }
 
-    # 2. total_years_experience — integer >= 0
-    try:
-        tye = int(result.get("total_years_experience") or 0)
-        if tye < 0:
-            logger.warning(f"Extraction validation: total_years_experience was negative ({tye}), setting to 0")
-            tye = 0
-    except (TypeError, ValueError):
-        logger.warning("Extraction validation: total_years_experience not parseable, setting to 0")
-        tye = 0
-    result["total_years_experience"] = tye
+    # 2. name — required string, but fallback to Unknown Candidate
+    if not isinstance(result.get("name"), str) or not result["name"].strip():
+        logger.warning("Extraction validation: name missing or invalid, defaulting to Unknown Candidate")
+        result["name"] = "Unknown Candidate"
+    else:
+        result["name"] = result["name"].strip()
 
-    # 3. skills — array, every item must have at least a 'name' field
+    # 3. email / phone — optional strings; keep None when invalid
+    email = result.get("email")
+    if isinstance(email, str):
+        email = email.strip().lower()
+        result["email"] = email if email else None
+    elif email is None:
+        result["email"] = None
+    else:
+        logger.warning("Extraction validation: email was not a string, defaulting to None")
+        result["email"] = None
+
+    phone = result.get("phone")
+    if isinstance(phone, str):
+        phone = phone.strip()
+        result["phone"] = phone if phone else None
+    elif phone is None:
+        result["phone"] = None
+    else:
+        logger.warning("Extraction validation: phone was not a string, defaulting to None")
+        result["phone"] = None
+
+    # 4. skills — array, every item must have at least a 'name' field
     skills = result.get("skills")
     if not isinstance(skills, list):
         logger.warning("Extraction validation: skills was not an array, setting to []")
@@ -420,7 +480,7 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning(f"Extraction validation: dropping skill entry missing name: {s}")
     result["skills"] = valid_skills
 
-    # 4. jobs — array, every item must have title, company, start_year
+    # 5. jobs — array, every item must have title, company, start_year
     jobs = result.get("jobs")
     if not isinstance(jobs, list):
         logger.warning("Extraction validation: jobs was not an array, setting to []")
@@ -436,13 +496,13 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning(f"Extraction validation: dropping job entry missing required fields: {j}")
     result["jobs"] = valid_jobs
 
-    # 5. education — must be an array, never null
+    # 6. education — must be an array, never null
     education = result.get("education")
     if not isinstance(education, list):
         logger.warning("Extraction validation: education was not an array, setting to []")
         result["education"] = []
 
-    # 6. Boolean fields — must be boolean, default False
+    # 7. Boolean fields — must be boolean, default False
     for field in [
         "requires_visa_sponsorship",
         "has_measurable_impact",
@@ -454,14 +514,14 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning(f"Extraction validation: {field} not boolean, defaulting to False")
             result[field] = False
 
-    # 7. average_tenure_years — must be float
+    # 8. average_tenure_years — must be float
     try:
         result["average_tenure_years"] = round(float(result.get("average_tenure_years") or 0.0), 1)
     except (TypeError, ValueError):
         logger.warning("Extraction validation: average_tenure_years not parseable, setting to 0.0")
         result["average_tenure_years"] = 0.0
 
-    # 8. cover_letter_analysis — must be a dict with required keys
+    # 9. cover_letter_analysis — must be a dict with required keys
     cla = result.get("cover_letter_analysis")
     if not isinstance(cla, dict):
         logger.warning("Extraction validation: cover_letter_analysis missing, setting default")
@@ -473,7 +533,7 @@ def validate_extraction_result(raw: Dict[str, Any]) -> Dict[str, Any]:
             "is_generic": True,
         }
 
-    # 9. custom_answer_analysis — must be an array
+    # 10. custom_answer_analysis — must be an array
     caa = result.get("custom_answer_analysis")
     if not isinstance(caa, list):
         logger.warning("Extraction validation: custom_answer_analysis not array, setting to []")
@@ -602,13 +662,59 @@ _DEGREE_RANK = {"none": 0, "high school": 1, "associate": 2, "bachelor": 3, "mas
 _DEGREE_DISPLAY = {0: "None", 1: "High School", 2: "Associate", 3: "Bachelors", 4: "Masters", 5: "PhD"}
 
 
-def calculate_years_used(skill: dict, jobs: list, current_year: int = 2026) -> float | None:
+def _resolve_current_year(current_year: Optional[int] = None) -> int:
+    """Return the caller-provided year or the runtime current UTC year."""
+    if current_year is not None:
+        return int(current_year)
+    return datetime.utcnow().year
+
+
+def _validated_contact_fields(
+    extracted_email: Optional[str],
+    extracted_phone: Optional[str],
+    resume_text: str,
+) -> tuple[str, str]:
+    """Use LLM-extracted contact fields when valid; fallback to regex extraction."""
+    email = (extracted_email or "").strip().lower() if isinstance(extracted_email, str) else ""
+    if not email or not EMAIL_PATTERN.fullmatch(email):
+        email_match = EMAIL_PATTERN.search(resume_text or "")
+        email = email_match.group(0).lower() if email_match else "unknown@error.com"
+
+    phone = (extracted_phone or "").strip() if isinstance(extracted_phone, str) else ""
+    if not phone or not PHONE_PATTERN.search(phone):
+        phone_match = PHONE_PATTERN.search(resume_text or "")
+        phone = phone_match.group(0).strip() if phone_match else ""
+
+    return email, phone
+
+
+def calculate_total_years_experience(jobs: list, current_year: Optional[int] = None) -> float:
+    """
+    Sum the duration of every job in the extracted jobs list.
+    Duration = end_year - start_year (use current_year if end_year is null).
+    Skip entries with no start_year. Minimum duration per role is 0.
+    Returns the total rounded to one decimal place.
+    """
+    active_year = _resolve_current_year(current_year)
+    total = 0.0
+    for job in jobs:
+        start = job.get("start_year")
+        if start is None:
+            continue
+        end = job.get("end_year") or active_year
+        duration = max(end - start, 0)
+        total += duration
+    return round(total, 1)
+
+
+def calculate_years_used(skill: dict, jobs: list, current_year: Optional[int] = None) -> float | None:
     """
     Calculates years a skill was used based on the duration of the job
     it was associated with. Uses job_index from the skill to look up
     the corresponding job in the jobs list and computes end - start.
     Returns None if job_index is missing or out of bounds.
     """
+    active_year = _resolve_current_year(current_year)
     job_index = skill.get("job_index")
     if job_index is None:
         return None
@@ -617,7 +723,7 @@ def calculate_years_used(skill: dict, jobs: list, current_year: int = 2026) -> f
 
     job = jobs[job_index]
     start = job.get("start_year")
-    end = job.get("end_year") or current_year
+    end = job.get("end_year") or active_year
 
     if start is None:
         return None
@@ -626,13 +732,14 @@ def calculate_years_used(skill: dict, jobs: list, current_year: int = 2026) -> f
     return round(max(duration, 0.5), 1)  # minimum 0.5 to avoid zero for short contracts
 
 
-def calculate_employment_gaps(jobs: list, current_year: int = 2026) -> bool:
+def calculate_employment_gaps(jobs: list, current_year: Optional[int] = None) -> bool:
     """
     Returns True if any gap of 6 or more months exists between consecutive
     roles, or between the most recent role's end date and today.
     Sorts jobs by start_year ascending before comparing.
     Returns False if fewer than 2 jobs exist.
     """
+    active_year = _resolve_current_year(current_year)
     if not jobs or len(jobs) < 2:
         return False
 
@@ -642,8 +749,8 @@ def calculate_employment_gaps(jobs: list, current_year: int = 2026) -> bool:
     )
 
     for i in range(len(sorted_jobs) - 1):
-        current_end = sorted_jobs[i].get("end_year") or current_year
-        next_start = sorted_jobs[i + 1].get("start_year", current_year)
+        current_end = sorted_jobs[i].get("end_year") or active_year
+        next_start = sorted_jobs[i + 1].get("start_year", active_year)
         gap_months = (next_start - current_end) * 12
         if gap_months >= 6:
             return True
@@ -651,12 +758,13 @@ def calculate_employment_gaps(jobs: list, current_year: int = 2026) -> bool:
     return False
 
 
-def calculate_average_tenure(jobs: list, current_year: int = 2026) -> float:
+def calculate_average_tenure(jobs: list, current_year: Optional[int] = None) -> float:
     """
     Calculates average years spent per role across all jobs in the list.
     Uses end_year if present, otherwise uses current_year for active roles.
     Returns 0.0 if the jobs list is empty.
     """
+    active_year = _resolve_current_year(current_year)
     if not jobs:
         return 0.0
 
@@ -665,7 +773,7 @@ def calculate_average_tenure(jobs: list, current_year: int = 2026) -> float:
         start = job.get("start_year")
         if start is None:
             continue
-        end = job.get("end_year") or current_year
+        end = job.get("end_year") or active_year
         tenure = max(end - start, 0)
         tenures.append(tenure)
 
@@ -779,35 +887,39 @@ async def extract_candidate_facts(
         # --- Step 1: Validate raw Gemini output ---
         extracted = validate_extraction_result(raw_extracted)
 
-        # --- Step 2: Calculate employment gaps from job dates ---
+        # --- Step 2: Calculate total years experience from job durations ---
+        current_year = _resolve_current_year()
+
+        extracted["total_years_experience"] = calculate_total_years_experience(
+            extracted.get("jobs", []), current_year=current_year
+        )
+
+        # --- Step 3: Calculate employment gaps from job dates ---
         extracted["employment_gaps"] = calculate_employment_gaps(
-            extracted.get("jobs", []), current_year=2026
+            extracted.get("jobs", []), current_year=current_year
         )
 
-        # --- Step 3: Calculate average tenure from job dates ---
+        # --- Step 4: Calculate average tenure from job dates ---
         extracted["average_tenure_years"] = calculate_average_tenure(
-            extracted.get("jobs", []), current_year=2026
+            extracted.get("jobs", []), current_year=current_year
         )
 
-        # --- Step 4: Calculate years_used per skill from job durations ---
+        # --- Step 5: Calculate years_used per skill from job durations ---
         for skill in extracted.get("skills", []):
             skill["years_used"] = calculate_years_used(
-                skill, extracted.get("jobs", []), current_year=2026
+                skill, extracted.get("jobs", []), current_year=current_year
             )
 
         # --- If resume was not extractable, return early with fallback ---
         if extracted.get("extractable_text") is False:
             fallback = dict(_EMPTY_FALLBACK)
-            # Still try to pull name/email/phone from raw text via regex
-            email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
-            phone_match = re.search(r"(?:\+?\d[\d\s().-]{7,}\d)", resume_text)
-            first_line = (resume_text or "").splitlines()[0].strip() if resume_text else ""
-            if first_line and len(first_line.split()) <= 6 and "@" not in first_line:
-                fallback["name"] = first_line
-            if email_match:
-                fallback["email"] = email_match.group(0).lower()
-            if phone_match:
-                fallback["phone"] = phone_match.group(0).strip()
+            fallback["name"] = str(extracted.get("name") or "").strip() or "Unknown Candidate"
+            email, phone = _validated_contact_fields(
+                extracted.get("email"), extracted.get("phone"), resume_text
+            )
+            fallback["email"] = email
+            fallback["phone"] = phone
+            fallback["has_contact_info"] = bool(email and email != "unknown@error.com") or bool(phone)
             print("⚠️ Resume not extractable — returning fallback")
             return fallback
 
@@ -850,20 +962,19 @@ async def extract_candidate_facts(
             for skill in required_skills
         ]
 
-        # Contact info from raw text via regex (more reliable than AI extraction)
-        email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", resume_text)
-        phone_match = re.search(r"(?:\+?\d[\d\s().-]{7,}\d)", resume_text)
-        name = "Unknown Candidate"
-        first_line = (resume_text or "").splitlines()[0].strip() if resume_text else ""
-        if first_line and len(first_line.split()) <= 6 and "@" not in first_line:
-            name = first_line
+        # Prefer LLM-structured fields and only fallback to regex for contact validation.
+        name = str(extracted.get("name") or "").strip() or "Unknown Candidate"
+        email, phone = _validated_contact_fields(
+            extracted.get("email"), extracted.get("phone"), resume_text
+        )
+        has_contact_info = bool(email and email != "unknown@error.com") or bool(phone)
 
         # --- Assemble final data dict ---
         data: Dict[str, Any] = {
             # Backward-compatible fields (used by scoring, tasks, knockout filters)
             "name": name,
-            "email": email_match.group(0).lower() if email_match else "unknown@error.com",
-            "phone": phone_match.group(0).strip() if phone_match else "",
+            "email": email,
+            "phone": phone,
             "total_years_experience": total_years_experience,
             "highest_education_level": highest_education_level,
             "job_titles": job_titles,
@@ -875,7 +986,7 @@ async def extract_candidate_facts(
             # New enriched fields
             "extractable_text": extracted.get("extractable_text", True),
             "has_measurable_impact": extracted.get("has_measurable_impact", False),
-            "has_contact_info": extracted.get("has_contact_info", False),
+            "has_contact_info": bool(extracted.get("has_contact_info", False)) or has_contact_info,
             "has_clear_job_titles": extracted.get("has_clear_job_titles", False),
             "employment_gaps": extracted.get("employment_gaps", False),
             "average_tenure_years": extracted.get("average_tenure_years", 0.0),
@@ -910,18 +1021,41 @@ def _fuzzy_match_skill(
     the candidate's skill dict, or (None, 0.0) if nothing matches.
 
     Strategy (in priority order):
-      1. Exact lowercase match          — "python" == "python"
-      2. Required is substring of key   — "postgres" in "postgresql"
-      3. Key is substring of required   — "js" in "javascript"
+      1. Exact lowercase match               — "python" == "python"
+      2. Whole-term regex match in key       — "java" in "java 17" but not "javascript"
+      3. Version suffix match                — "java" matches "java17" / "java-17"
+      4. Whole-term reverse containment      — key appears as a whole term in required
     """
-    req = required.lower()
+    req = required.strip().lower()
+    if not req:
+        return None, 0.0
+
+    def _whole_term(haystack: str, needle: str) -> bool:
+        pattern = rf"(?<![A-Za-z0-9]){re.escape(needle)}(?![A-Za-z0-9])"
+        return re.search(pattern, haystack) is not None
+
     # 1. Exact
     if req in candidate_skills_lower:
         return req, candidate_skills_lower[req]
-    # 2 & 3. Substring (both directions)
+
+    # 2. Whole-term regex in candidate keys
     for key, yrs in candidate_skills_lower.items():
-        if req in key or key in req:
+        key_norm = key.strip().lower()
+        if _whole_term(key_norm, req):
             return key, yrs
+
+        # 3. Version suffix (e.g., java17, java-17, java v17)
+        if key_norm.startswith(req):
+            suffix = key_norm[len(req):]
+            if suffix and re.fullmatch(r"[\s._-]*v?\d+(?:\.\d+)*", suffix):
+                return key, yrs
+
+    # 4. Reverse whole-term containment
+    for key, yrs in candidate_skills_lower.items():
+        key_norm = key.strip().lower()
+        if _whole_term(req, key_norm):
+            return key, yrs
+
     return None, 0.0
 
 
@@ -1142,7 +1276,319 @@ def evaluate_knockout_filters(
     }
 
 
-# --- 5. SYNC WRAPPERS (for single-resume endpoints that can't be async) ---
+# --- 5. CANDIDATE SUMMARY GENERATION ---
+
+SUMMARY_SYSTEM_PROMPT = """You are a recruitment analyst writing internal notes for a hiring team. Your job is to produce a structured JSON summary of a candidate based on extracted resume data and scoring results.
+
+Rules you must follow without exception:
+1. Write only what the data supports — never invent or assume facts not present in the provided data.
+2. Never use subjective language like "impressive", "strong background", "excellent", "talented", "ideal" — describe facts only.
+3. Never make a hiring recommendation. Never say "should hire" or "should reject".
+4. Never compare this candidate to other candidates.
+5. The candidate_summary must be based only on the extracted facts provided, not on any prior knowledge. It must NEVER be null — if data is limited, write what you can from available facts and note naturally in the text what information is missing.
+6. For candidates in the "Filtered Out" bucket, match_reasoning must reference ONLY the hard gate failures listed in the knockout_flags array. Do NOT mention skill gaps, scoring penalties, or any other scoring details — only the knockout reasons.
+7. Return only a valid JSON object with exactly the keys specified. No preamble, no markdown, no code fences."""
+
+
+def _calculate_extraction_confidence(candidate_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Deterministically calculate extraction confidence from candidate data."""
+    jobs = candidate_data.get("jobs") or []
+    skills = candidate_data.get("skills_detailed") or []
+    education = candidate_data.get("education") or []
+    extractable = candidate_data.get("extractable_text", True)
+
+    jobs_with_start = [j for j in jobs if j.get("start_year") is not None]
+    all_null_starts = len(jobs) > 0 and len(jobs_with_start) == 0
+
+    # Low confidence checks
+    if extractable is False:
+        return {"level": "low", "confidence_reason": "Resume could not be parsed into readable text."}
+    if len(jobs) < 2:
+        return {"level": "low", "confidence_reason": "Fewer than 2 work history entries were extracted."}
+    if len(skills) < 2:
+        return {"level": "low", "confidence_reason": "Fewer than 2 skills were identified in the resume."}
+    if all_null_starts:
+        return {"level": "low", "confidence_reason": "No job entries included start dates."}
+
+    # High confidence checks — all must be true
+    has_clear_titles = candidate_data.get("has_clear_job_titles", False)
+    has_impact = candidate_data.get("has_measurable_impact", False)
+    if (
+        len(jobs_with_start) >= 2
+        and len(skills) >= 3
+        and len(education) >= 1
+        and has_clear_titles
+        and has_impact
+    ):
+        return {"level": "high"}
+
+    # Everything else is medium
+    reasons = []
+    if len(jobs_with_start) < 2:
+        reasons.append("some job entries lack start dates")
+    if len(skills) < 3:
+        reasons.append("limited skills identified")
+    if not education:
+        reasons.append("no education entries found")
+    if not has_clear_titles:
+        reasons.append("some roles lack clear job titles")
+    if not has_impact:
+        reasons.append("no quantified achievements found")
+    reason = "; ".join(reasons) if reasons else "Some resume details were incomplete."
+    return {"level": "medium", "confidence_reason": reason}
+
+
+def _build_summary_fallback(
+    bucket: str,
+    total_score: int,
+    confidence: Dict[str, Any],
+    candidate_data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build a fallback summary when Gemini is unavailable or fails."""
+    # Build a non-null candidate_summary from whatever data is available
+    parts = []
+    if candidate_data:
+        name = candidate_data.get("name")
+        if name and name != "Unknown Candidate":
+            parts.append(name)
+        titles = candidate_data.get("job_titles") or []
+        if titles:
+            parts.append(f"currently {titles[0]}" if len(parts) else titles[0])
+        years = candidate_data.get("total_years_experience")
+        if years and years > 0:
+            parts.append(f"with {years:.0f} years of experience")
+        edu = candidate_data.get("highest_education_level")
+        if edu and edu.lower() not in ("none", "unknown", ""):
+            parts.append(f"holding a {edu} degree")
+    candidate_summary = ". ".join([" ".join(parts) + "."]) if parts else "Insufficient data to generate a candidate summary."
+
+    fallback: Dict[str, Any] = {
+        "candidate_summary": candidate_summary,
+        "match_reasoning": f"Candidate was assigned to {bucket} with a score of {total_score}/100.",
+        "override_suggestion": None if bucket == "Strong Match" else "Review the resume manually to verify the system's assessment.",
+        "extraction_confidence": confidence["level"],
+    }
+    if "confidence_reason" in confidence:
+        fallback["confidence_reason"] = confidence["confidence_reason"]
+    return fallback
+
+
+async def generate_candidate_summary(
+    candidate_data: Dict[str, Any],
+    score_breakdown: Dict[str, Any],
+    bucket: str,
+    knockout_flags: List[Dict[str, Any]],
+    job_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Generate a structured natural language summary for a candidate using Gemini.
+
+    Returns a dict with keys: candidate_summary, match_reasoning,
+    override_suggestion, extraction_confidence, and optionally confidence_reason.
+    """
+    # Calculate confidence deterministically before calling Gemini
+    confidence = _calculate_extraction_confidence(candidate_data)
+    total_score = sum(
+        v.get("total", 0) for k, v in score_breakdown.items()
+        if isinstance(v, dict) and v.get("affects_score", False)
+    )
+
+    model = _get_model()
+    if model is None:
+        logger.warning("Gemini unavailable for summary generation — using fallback")
+        return _build_summary_fallback(bucket, total_score, confidence, candidate_data)
+
+    await rate_limiter.wait_if_needed()
+
+    # Build structured user message with all context Gemini needs
+    user_data = {
+        "candidate": {
+            "name": candidate_data.get("name"),
+            "total_years_experience": candidate_data.get("total_years_experience"),
+            "highest_education_level": candidate_data.get("highest_education_level"),
+            "job_titles": candidate_data.get("job_titles", []),
+            "jobs": candidate_data.get("jobs", []),
+            "education": candidate_data.get("education", []),
+            "skills": [s.get("name") for s in (candidate_data.get("skills_detailed") or []) if s.get("name")],
+            "has_measurable_impact": candidate_data.get("has_measurable_impact"),
+            "employment_gaps": candidate_data.get("employment_gaps"),
+            "average_tenure_years": candidate_data.get("average_tenure_years"),
+        },
+        "job_requirements": {
+            "title": job_config.get("title"),
+            "required_skills": job_config.get("required_skills", []),
+            "min_experience": job_config.get("min_experience"),
+            "required_education": job_config.get("required_education"),
+            "department": job_config.get("department"),
+        },
+        "scoring": {
+            "total_score": total_score,
+            "bucket": bucket,
+            "score_breakdown": score_breakdown,
+        },
+        "knockout_flags": knockout_flags,
+    }
+    if "confidence_reason" in confidence:
+        user_data["extraction_confidence_reason"] = confidence["confidence_reason"]
+
+    override_instruction = ""
+    if bucket == "Strong Match":
+        override_instruction = 'Set "override_suggestion" to null.'
+    elif bucket == "Filtered Out":
+        override_instruction = '"override_suggestion" should tell the recruiter what to check before confirming the rejection.'
+    else:
+        override_instruction = '"override_suggestion" should tell the recruiter what could move this candidate to Strong Match.'
+
+    confidence_note = ""
+    if "confidence_reason" in confidence:
+        confidence_note = f'\nThe extraction confidence is {confidence["level"]}. Reason: {confidence["confidence_reason"]}. If data is limited, note naturally in the candidate_summary what information was not found in the resume.'
+
+    prompt = f"""{SUMMARY_SYSTEM_PROMPT}
+
+Produce a JSON object with exactly these keys:
+- "candidate_summary": 2-3 factual sentences about who this candidate is based on the data below. Cover their current role, total years of experience, industry background, and education. This field must NEVER be null — write what you can from the available data.
+- "match_reasoning": 2-3 sentences explaining why the candidate was placed in the "{bucket}" bucket. {'For this Filtered Out candidate, reference ONLY the hard gate failures from the knockout_flags list. Do not mention skill gaps or scoring.' if bucket == 'Filtered Out' else 'Reference actual job requirements and how they were met or missed.'}
+- "override_suggestion": {override_instruction}
+{confidence_note}
+DATA:
+{json.dumps(user_data, default=str)}
+
+Return ONLY the JSON object."""
+
+    try:
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: model.generate_content(
+                prompt,
+                generation_config=GenerationConfig(
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                )
+            )
+        )
+        json_text = clean_json_string(response.text)
+        parsed = json.loads(json_text)
+
+        # Validate required fields exist
+        result: Dict[str, Any] = {
+            "candidate_summary": parsed.get("candidate_summary"),
+            "match_reasoning": parsed.get("match_reasoning"),
+            "override_suggestion": parsed.get("override_suggestion") if bucket != "Strong Match" else None,
+            "extraction_confidence": confidence["level"],
+        }
+        if "confidence_reason" in confidence:
+            result["confidence_reason"] = confidence["confidence_reason"]
+
+        # Ensure no null in required text fields (except override_suggestion for Strong Match)
+        if not result["candidate_summary"] or not result["match_reasoning"]:
+            logger.warning("Gemini returned incomplete summary fields — using fallback")
+            return _build_summary_fallback(bucket, total_score, confidence, candidate_data)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Summary generation failed: {e}")
+        return _build_summary_fallback(bucket, total_score, confidence, candidate_data)
+
+
+def generate_candidate_summary_sync(
+    candidate_data: Dict[str, Any],
+    score_breakdown: Dict[str, Any],
+    bucket: str,
+    knockout_flags: List[Dict[str, Any]],
+    job_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Synchronous wrapper around generate_candidate_summary."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(generate_candidate_summary(
+            candidate_data, score_breakdown, bucket, knockout_flags, job_config,
+        ))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(lambda: asyncio.run(generate_candidate_summary(
+            candidate_data, score_breakdown, bucket, knockout_flags, job_config,
+        )))
+        return future.result()
+
+
+async def get_skill_embeddings(skill_names: List[str]) -> Dict[str, List[float]]:
+    """
+    Generate text embeddings for skill names using Vertex AI text-embedding-004.
+
+    Returns a dict of {skill_name: embedding_values}. If any embedding API call
+    fails, logs the error and returns an empty dict so callers can safely fall
+    back to alias-only matching.
+    """
+    if not skill_names:
+        return {}
+
+    embedding_model = _get_embedding_model()
+    if embedding_model is None:
+        logger.warning("Skill embedding model unavailable; returning empty embedding map")
+        return {}
+
+    # Keep insertion order stable and avoid duplicate API payload entries.
+    unique_skills: List[str] = []
+    seen: set[str] = set()
+    for raw_name in skill_names:
+        if not isinstance(raw_name, str):
+            continue
+        skill_name = raw_name.strip()
+        if not skill_name:
+            continue
+        if skill_name in seen:
+            continue
+        seen.add(skill_name)
+        unique_skills.append(skill_name)
+
+    if not unique_skills:
+        return {}
+
+    embeddings: Dict[str, List[float]] = {}
+    loop = asyncio.get_event_loop()
+
+    for start_idx in range(0, len(unique_skills), EMBEDDING_BATCH_SIZE):
+        batch = unique_skills[start_idx : start_idx + EMBEDDING_BATCH_SIZE]
+        batch_phrases = [f"{SKILL_EMBEDDING_PREFIX}{skill_name}" for skill_name in batch]
+        try:
+            await rate_limiter.wait_if_needed()
+            batch_embeddings = await loop.run_in_executor(
+                None,
+                lambda payload=batch_phrases: embedding_model.get_embeddings(payload),
+            )
+            for skill_name, embedding in zip(batch, batch_embeddings):
+                values = getattr(embedding, "values", None)
+                if values is None:
+                    continue
+                embeddings[skill_name] = list(values)
+        except Exception as exc:
+            logger.error(
+                "Skill embedding generation failed for batch %s-%s: %s",
+                start_idx,
+                start_idx + len(batch) - 1,
+                exc,
+            )
+            return {}
+
+    return embeddings
+
+
+def get_skill_embeddings_sync(skill_names: List[str]) -> Dict[str, List[float]]:
+    """Synchronous wrapper around get_skill_embeddings."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(get_skill_embeddings(skill_names))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(lambda: asyncio.run(get_skill_embeddings(skill_names)))
+        return future.result()
+
+
+# --- 6. SYNC WRAPPERS (for single-resume endpoints that can't be async) ---
 
 def extract_candidate_facts_sync(
     resume_text: str,

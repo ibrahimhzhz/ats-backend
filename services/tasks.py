@@ -1,7 +1,11 @@
 import asyncio
 import re
 import base64
+import json
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +15,8 @@ from core.celery_app import celery_app
 from database import SessionLocal
 from services.ai_engine import extract_candidate_facts, extract_jd_requirements
 from services.ai_engine import normalize_job_requirements
+from services.ai_engine import generate_candidate_summary_sync
+from services.ai_engine import get_skill_embeddings_sync
 from services.pdf_parser import extract_text_from_pdf
 from scoring import (
     calculate_deterministic_score,
@@ -19,6 +25,87 @@ from scoring import (
     assign_bucket,
     bucket_to_status,
 )
+
+
+def _serialize_summary(summary_payload: Any) -> str:
+    """Store structured AI summaries as JSON text in Applicant.summary."""
+    if summary_payload is None:
+        return ""
+    if isinstance(summary_payload, str):
+        return summary_payload
+    if isinstance(summary_payload, (dict, list)):
+        try:
+            return json.dumps(summary_payload)
+        except (TypeError, ValueError):
+            return str(summary_payload)
+    return str(summary_payload)
+
+
+def _extract_skill_names_for_embeddings(skills_detailed: List[Dict[str, Any]] | None) -> List[str]:
+    """Return de-duplicated skill names from extracted skills_detailed payload."""
+    names: List[str] = []
+    seen: set[str] = set()
+
+    for skill in (skills_detailed or []):
+        raw_name = (skill or {}).get("name")
+        if not raw_name:
+            continue
+        skill_name = str(raw_name).strip()
+        if not skill_name:
+            continue
+        dedupe_key = skill_name.lower()
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        names.append(skill_name)
+
+    return names
+
+
+def _get_or_create_required_skill_embeddings(
+    db,
+    job: models.Job,
+    required_skill_names: List[str],
+) -> Dict[str, List[float]]:
+    """
+    Return cached required skill embeddings for a job, generating once when absent.
+    """
+    if job.required_skill_embeddings is not None:
+        if isinstance(job.required_skill_embeddings, dict):
+            logger.info(
+                "Reusing required skill embeddings for job_id=%s (%s skills)",
+                job.id,
+                len(job.required_skill_embeddings),
+            )
+            return job.required_skill_embeddings
+
+        logger.warning(
+            "Job %s has non-dict required_skill_embeddings; treating as empty map",
+            job.id,
+        )
+        return {}
+
+    if not required_skill_names:
+        job.required_skill_embeddings = {}
+        db.flush()
+        return {}
+
+    generated = get_skill_embeddings_sync(required_skill_names)
+    if generated:
+        logger.info(
+            "Generated required skill embeddings for job_id=%s (%s skills)",
+            job.id,
+            len(generated),
+        )
+    else:
+        logger.error(
+            "Failed generating required skill embeddings for job_id=%s; storing empty map",
+            job.id,
+        )
+
+    job.required_skill_embeddings = generated or {}
+    db.flush()
+    return job.required_skill_embeddings
 
 
 def _advance_job_progress(db, job_id: int, company_id: int):
@@ -189,9 +276,38 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 "offers_visa_sponsorship": normalized_requirements.get("offers_visa_sponsorship"),
             }
 
+            candidate_skill_names = _extract_skill_names_for_embeddings(
+                candidate_data.get("skills_detailed")
+            )
+            candidate_skill_embeddings = (
+                get_skill_embeddings_sync(candidate_skill_names)
+                if candidate_skill_names
+                else {}
+            )
+            if candidate_skill_names and not candidate_skill_embeddings:
+                logger.error(
+                    "Candidate skill embedding generation failed for job_id=%s email=%s",
+                    job_id,
+                    candidate_data.get("email", pre_scan_email),
+                )
+
+            required_skill_names = [
+                str(skill).strip()
+                for skill in (job_config.get("required_skills") or [])
+                if str(skill).strip()
+            ]
+            required_skill_embeddings = _get_or_create_required_skill_embeddings(
+                db,
+                job,
+                required_skill_names,
+            )
+
             # ── Score ─────────────────────────────────────────────────────
             total_score, score_breakdown = calculate_deterministic_score(
-                candidate_data, job_config,
+                candidate_data,
+                job_config,
+                required_skill_embeddings=required_skill_embeddings,
+                candidate_skill_embeddings=candidate_skill_embeddings,
             )
 
             # ── Knockout ──────────────────────────────────────────────────
@@ -205,27 +321,24 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 total_score = 0
 
             # ── Signals & bucket ──────────────────────────────────────────
-            candidate_signals = generate_candidate_signals(candidate_data)
+            candidate_signals = generate_candidate_signals(candidate_data, job_config)
             bucket = assign_bucket(total_score, has_hard_knockout)
             candidate_status = bucket_to_status(bucket, has_hard_knockout)
 
             # ── Summary ───────────────────────────────────────────────────
-            matched = score_breakdown["skills"].get("matched_required", [])
-            missing = score_breakdown["skills"].get("missing_required", [])
-            candidate_summary = (
-                f"Score {total_score}/100. "
-                f"Experience {score_breakdown['experience']['total']}/25, "
-                f"Skills {score_breakdown['skills']['total']}/35 "
-                f"({len(matched)} matched, {len(missing)} missing), "
-                f"Education {score_breakdown['education']['total']}/15, "
-                f"Role fit {score_breakdown['role_level']['total']}/10, "
-                f"Application {score_breakdown['application_quality']['total']}/15."
-            )
-            if has_hard_knockout:
-                reasons = "; ".join(
-                    f["reason"] for f in knockout_flags if f["severity"] == "hard"
+            try:
+                candidate_summary = generate_candidate_summary_sync(
+                    candidate_data, score_breakdown, bucket, knockout_flags, job_config,
                 )
-                candidate_summary = f"Knockout: {reasons}. {candidate_summary}"
+            except Exception as e:
+                logger.error(f"Summary generation failed for {pre_scan_email}: {e}")
+                candidate_summary = {
+                    "candidate_summary": None,
+                    "match_reasoning": f"Assigned to {bucket} with score {total_score}/100.",
+                    "override_suggestion": None,
+                    "extraction_confidence": "low",
+                    "confidence_reason": "Summary generation encountered an error.",
+                }
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -237,8 +350,9 @@ def process_resume(resume_b64: str, job_id: int, company_id: int):
                 resume_pdf=pdf_bytes,
                 years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
+                skill_embeddings=candidate_skill_embeddings,
                 match_score=total_score,
-                summary=candidate_summary,
+                summary=_serialize_summary(candidate_summary),
                 status=candidate_status,
                 breakdown=score_breakdown,
                 # Enriched extraction fields
@@ -356,9 +470,38 @@ def process_public_resume(
                 "offers_visa_sponsorship": normalized_requirements.get("offers_visa_sponsorship"),
             }
 
+            candidate_skill_names = _extract_skill_names_for_embeddings(
+                candidate_data.get("skills_detailed")
+            )
+            candidate_skill_embeddings = (
+                get_skill_embeddings_sync(candidate_skill_names)
+                if candidate_skill_names
+                else {}
+            )
+            if candidate_skill_names and not candidate_skill_embeddings:
+                logger.error(
+                    "Candidate skill embedding generation failed for public submission job_id=%s email=%s",
+                    job_id,
+                    submitted_email,
+                )
+
+            required_skill_names = [
+                str(skill).strip()
+                for skill in (job_config.get("required_skills") or [])
+                if str(skill).strip()
+            ]
+            required_skill_embeddings = _get_or_create_required_skill_embeddings(
+                db,
+                job,
+                required_skill_names,
+            )
+
             # ── Score ─────────────────────────────────────────────────────
             total_score, score_breakdown = calculate_deterministic_score(
-                candidate_data, job_config,
+                candidate_data,
+                job_config,
+                required_skill_embeddings=required_skill_embeddings,
+                candidate_skill_embeddings=candidate_skill_embeddings,
             )
 
             # ── Knockout ──────────────────────────────────────────────────
@@ -372,27 +515,24 @@ def process_public_resume(
                 total_score = 0
 
             # ── Signals & bucket ──────────────────────────────────────────
-            candidate_signals = generate_candidate_signals(candidate_data)
+            candidate_signals = generate_candidate_signals(candidate_data, job_config)
             bucket = assign_bucket(total_score, has_hard_knockout)
             candidate_status = bucket_to_status(bucket, has_hard_knockout)
 
             # ── Summary ───────────────────────────────────────────────────
-            matched = score_breakdown["skills"].get("matched_required", [])
-            missing = score_breakdown["skills"].get("missing_required", [])
-            candidate_summary = (
-                f"Score {total_score}/100. "
-                f"Experience {score_breakdown['experience']['total']}/25, "
-                f"Skills {score_breakdown['skills']['total']}/35 "
-                f"({len(matched)} matched, {len(missing)} missing), "
-                f"Education {score_breakdown['education']['total']}/15, "
-                f"Role fit {score_breakdown['role_level']['total']}/10, "
-                f"Application {score_breakdown['application_quality']['total']}/15."
-            )
-            if has_hard_knockout:
-                reasons = "; ".join(
-                    f["reason"] for f in knockout_flags if f["severity"] == "hard"
+            try:
+                candidate_summary = generate_candidate_summary_sync(
+                    candidate_data, score_breakdown, bucket, knockout_flags, job_config,
                 )
-                candidate_summary = f"Knockout: {reasons}. {candidate_summary}"
+            except Exception as e:
+                logger.error(f"Summary generation failed for {submitted_email}: {e}")
+                candidate_summary = {
+                    "candidate_summary": None,
+                    "match_reasoning": f"Assigned to {bucket} with score {total_score}/100.",
+                    "override_suggestion": None,
+                    "extraction_confidence": "low",
+                    "confidence_reason": "Summary generation encountered an error.",
+                }
 
             applicant = models.Applicant(
                 job_id=job_id,
@@ -404,8 +544,9 @@ def process_public_resume(
                 resume_pdf=pdf_bytes,
                 years_experience=max(0, int(round(float(candidate_data.get("total_years_experience", 0) or 0.0)))),
                 skills=candidate_data.get("skills_with_years", {}),
+                skill_embeddings=candidate_skill_embeddings,
                 match_score=total_score,
-                summary=candidate_summary,
+                summary=_serialize_summary(candidate_summary),
                 status=candidate_status,
                 breakdown=score_breakdown,
                 cover_letter=cover_letter,

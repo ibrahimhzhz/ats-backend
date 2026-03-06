@@ -124,6 +124,41 @@ def run_migrations():
             or "duplicate_object" in normalized
         )
 
+    def _column_exists(conn, table_name: str, column_name: str) -> bool:
+        if dialect == "postgresql":
+            query = text(
+                """
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = :table_name
+                  AND column_name = :column_name
+                LIMIT 1
+                """
+            )
+            result = conn.execute(
+                query,
+                {"table_name": table_name, "column_name": column_name},
+            ).first()
+            return result is not None
+
+        rows = conn.execute(text(f"PRAGMA table_info({table_name})")).mappings().all()
+        return any(row.get("name") == column_name for row in rows)
+
+    def _add_column_if_missing(conn, table_name: str, column_name: str, column_type_sql: str) -> None:
+        if _column_exists(conn, table_name, column_name):
+            return
+
+        stmt = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type_sql}"
+        try:
+            conn.execute(text(stmt))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            if _is_already_exists_error(str(e)):
+                return
+            print(f"⚠️ Migration statement failed: {stmt} | error={e}")
+
     with engine.connect() as conn:
         for stmt in new_columns:
             try:
@@ -134,6 +169,10 @@ def run_migrations():
                 if _is_already_exists_error(str(e)):
                     continue
                 print(f"⚠️ Migration statement failed: {stmt} | error={e}")
+
+        # Semantic skill embedding storage columns.
+        _add_column_if_missing(conn, "applicants", "skill_embeddings", "JSON")
+        _add_column_if_missing(conn, "jobs", "required_skill_embeddings", "JSON")
 
         dedup_statements = [
             """

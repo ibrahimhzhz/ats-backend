@@ -132,6 +132,7 @@ class JobResponse(JobCreate):
     views: Optional[int] = 0
     application_count: Optional[int] = 0
     form_config: Optional[dict] = None
+    required_skill_embeddings: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -188,6 +189,7 @@ class ApplicantResponse(BaseModel):
     employment_gaps: Optional[bool] = None
     average_tenure_years: Optional[float] = None
     has_measurable_impact: Optional[bool] = None
+    skill_embeddings: Optional[dict] = None
     score_breakdown: Optional[dict] = None
     knockout_flags: Optional[list] = None
     candidate_signals: Optional[list] = None

@@ -524,9 +524,9 @@
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
             <button onclick="setPipelineFilter('all')"         data-filter="all"         class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 bg-white shadow-sm text-slate-900">All</button>
-            <button onclick="setPipelineFilter('shortlisted')" data-filter="shortlisted" class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Shortlisted</button>
-            <button onclick="setPipelineFilter('review')"      data-filter="review"      class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Needs Review</button>
-            <button onclick="setPipelineFilter('rejected')"    data-filter="rejected"    class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Rejected</button>
+            <button onclick="setPipelineFilter('shortlisted')" data-filter="shortlisted" class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Strong Match</button>
+            <button onclick="setPipelineFilter('review')"      data-filter="review"      class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Potential</button>
+            <button onclick="setPipelineFilter('rejected')"    data-filter="rejected"    class="filter-tab px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 text-slate-500 hover:text-slate-700">Filtered Out</button>
           </div>
           <span class="text-xs text-slate-400" id="candidate-count-label"></span>
         </div>
@@ -588,9 +588,9 @@
           <select id="bulk-status-select"
             class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300">
             <option value="">— Set Status —</option>
-            <option value="shortlisted">Shortlisted</option>
-            <option value="review">Needs Review</option>
-            <option value="rejected">Rejected</option>
+            <option value="shortlisted">Strong Match</option>
+            <option value="review">Potential</option>
+            <option value="rejected">Filtered Out</option>
           </select>
           <button onclick="applyBulkStatus()"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-900 hover:bg-slate-700 text-white rounded-lg transition-colors">
@@ -1168,9 +1168,9 @@
             job.results.all_candidates = allCandidates;
             
             // Calculate stats from candidates
-            const shortlisted = allCandidates.filter(c => c.match_score >= 80 || c.status === 'shortlisted').length;
-            const review = allCandidates.filter(c => (c.match_score >= 60 && c.match_score < 80) || c.status === 'review').length;
-            const rejected = allCandidates.filter(c => c.match_score < 60 || c.status === 'rejected').length;
+            const shortlisted = allCandidates.filter(c => c.match_score >= 65 || c.status === 'shortlisted').length;
+            const review = allCandidates.filter(c => (c.match_score >= 35 && c.match_score < 65) || c.status === 'review').length;
+            const rejected = allCandidates.filter(c => c.match_score < 35 || c.status === 'rejected').length;
             
             job.results.total_processed = allCandidates.length;
             job.results.shortlisted_count = shortlisted;
@@ -1203,7 +1203,7 @@
             cards = [
               { label: "Active Job Postings",  value: s.active_jobs.toLocaleString(),             sub: `${s.total_jobs} total job${s.total_jobs !== 1 ? "s" : ""}`,  icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
               { label: "Candidates Screened",  value: s.total_applicants.toLocaleString(),         sub: "Total resumes in pipeline",                                     icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
-              { label: "Shortlisted",          value: s.shortlisted_applicants.toLocaleString(),   sub: `${shortlistRate}% shortlist rate`,                              icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
+              { label: "Strong Match",          value: s.shortlisted_applicants.toLocaleString(),   sub: `${shortlistRate}% match rate`,                              icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
               { label: "Pending Review",       value: s.pending_review.toLocaleString(),           sub: "Awaiting recruiter decision",                                   icon: "clock",        iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
             ];
           } else {
@@ -1220,7 +1220,7 @@
           cards = [
             { label: "Screening Sessions",   value: totalSessions.toLocaleString(),    sub: "All time",                         icon: "briefcase",    iconColor: "text-blue-600",   iconBg: "bg-blue-50" },
             { label: "Candidates Screened",  value: totalScreened.toLocaleString(),    sub: "Total resumes processed",          icon: "users",        iconColor: "text-violet-600", iconBg: "bg-violet-50" },
-            { label: "Shortlisted",          value: totalShortlisted.toLocaleString(), sub: `${shortlistRate}% shortlist rate`, icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
+            { label: "Strong Match",          value: totalShortlisted.toLocaleString(), sub: `${shortlistRate}% match rate`, icon: "user-check",   iconColor: "text-emerald-600",iconBg: "bg-emerald-50" },
             { label: "API Calls Saved",      value: totalSaved.toLocaleString(),       sub: "Via knockout pre-filter",          icon: "trending-down",iconColor: "text-amber-600",  iconBg: "bg-amber-50" },
           ];
         }
@@ -1305,9 +1305,9 @@
                   <th class="text-left text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Date</th>
                   <th class="text-center text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Portal Analytics</th>
                   <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Processed</th>
-                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Shortlisted</th>
-                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Review</th>
-                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Rejected</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Strong Match</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Potential</th>
+                  <th class="text-right text-xs font-semibold text-slate-500 px-4 py-3 uppercase tracking-wide">Filtered Out</th>
                   <th class="px-6 py-3"></th>
                 </tr>
               </thead>
@@ -1393,7 +1393,7 @@
           { label: "Duplicates Skipped", value: d.duplicates_skipped || 0,  accent: "text-sky-700",     ring: "border-sky-200",    bg: "bg-sky-50" },
           { label: "Rule Knockout",      value: d.knocked_out || 0,         accent: "text-amber-700",   ring: "border-amber-200",  bg: "bg-amber-50" },
           { label: "Scored",             value: d.scored || 0,              accent: "text-blue-700",    ring: "border-blue-200",   bg: "bg-blue-50" },
-          { label: "Shortlisted",        value: d.shortlisted_count || 0,        accent: "text-emerald-700", ring: "border-emerald-200",bg: "bg-emerald-50" },
+          { label: "Strong Match",        value: d.shortlisted_count || 0,        accent: "text-emerald-700", ring: "border-emerald-200",bg: "bg-emerald-50" },
         ];
         document.getElementById("pipeline-stats").innerHTML = stats.map(s => `
           <div class="${s.bg} rounded-xl border ${s.ring} px-4 py-4">
@@ -1490,8 +1490,8 @@
         }
         // Fallback only if backend sends nothing
         const score = Number(candidate.match_score || 0);
-        if (score >= 70) return "shortlisted";
-        if (score >= 45) return "review";
+        if (score >= 65) return "shortlisted";
+        if (score >= 35) return "review";
         return "rejected";
       }
 
@@ -1604,6 +1604,67 @@
         lucide.createIcons();
       }
 
+      // ── AI Summary helpers ──────────────────────────────────────────────
+      function parseCandidateSummary(candidate) {
+          const raw = candidate.summary;
+          if (!raw) return null;
+          if (typeof raw === "object" && raw !== null) return raw;
+          if (typeof raw === "string") {
+              try {
+                  const parsed = JSON.parse(raw);
+                  if (typeof parsed === "object" && parsed !== null) return parsed;
+              } catch {}
+              return { candidate_summary: raw };
+          }
+          return null;
+      }
+
+      function renderAISummarySection(candidate) {
+          const s = parseCandidateSummary(candidate);
+          if (!s) return "";
+
+          const summary = s.candidate_summary || "";
+          const reasoning = s.match_reasoning || "";
+          const override = s.override_suggestion || "";
+          const conf = s.extraction_confidence || {};
+          const level = (conf.level || "").toLowerCase();
+          const confReason = conf.confidence_reason || "";
+
+          const confColors = {
+              high:   "bg-emerald-900/40 text-emerald-300 ring-emerald-500/30",
+              medium: "bg-amber-900/40 text-amber-300 ring-amber-500/30",
+              low:    "bg-red-900/40 text-red-400 ring-red-500/30",
+          };
+          const confCls = confColors[level] || confColors.medium;
+          const confBadge = level
+              ? `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${confCls}" title="${escapeHtml(confReason)}">${level.charAt(0).toUpperCase() + level.slice(1)} Confidence</span>`
+              : "";
+
+          let html = `<div class="bg-slate-800/50 rounded-xl border border-slate-700 p-4 mb-4">`;
+          html += `<div class="flex items-center justify-between mb-3">
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">AI Summary</div>
+              ${confBadge}
+          </div>`;
+
+          if (summary) {
+              html += `<p class="text-sm text-slate-300 leading-relaxed mb-3">${escapeHtml(summary)}</p>`;
+          }
+          if (reasoning) {
+              html += `<div class="border-t border-slate-700/50 pt-3 mt-2 mb-2">
+                  <div class="text-xs font-medium text-slate-400 mb-1">Match Reasoning</div>
+                  <p class="text-xs text-slate-400 leading-relaxed">${escapeHtml(reasoning)}</p>
+              </div>`;
+          }
+          if (override) {
+              html += `<div class="border-t border-slate-700/50 pt-3 mt-2">
+                  <div class="text-xs font-medium text-blue-400 mb-1">💡 Override Suggestion</div>
+                  <p class="text-xs text-blue-300/80 leading-relaxed">${escapeHtml(override)}</p>
+              </div>`;
+          }
+          html += `</div>`;
+          return html;
+      }
+
       // ── New scoring display helpers ──────────────────────────────────────
       function renderTableScoreBreakdown(candidate) {
           const bd = candidate.score_breakdown;
@@ -1619,17 +1680,18 @@
           }
 
           const bars = [
-              { label: "Exp",    score: bd.experience?.total   ?? 0, max: 25, color: "bg-blue-400" },
-              { label: "Skills", score: bd.skills?.total        ?? 0, max: 35, color: "bg-violet-400" },
-              { label: "Edu",    score: bd.education?.total     ?? 0, max: 15, color: "bg-amber-400" },
-              { label: "Role",   score: bd.role_level?.total    ?? 0, max: 10, color: "bg-teal-400" },
-              { label: "App",    score: bd.application_quality?.total ?? 0, max: 15, color: "bg-pink-400" },
+              { label: "Skills", score: bd.skills?.total        ?? 0, max: 50, color: "bg-violet-400" },
+              { label: "Exp",    score: bd.experience?.total   ?? 0, max: 30, color: "bg-blue-400" },
+              { label: "Edu",    score: bd.education?.total     ?? 0, max: 20, color: "bg-amber-400" },
+              { label: "Role",   score: bd.role_level?.total    ?? 0, max: 10, color: "bg-teal-400", info: true },
+              { label: "App",    score: bd.application_quality?.total ?? 0, max: 15, color: "bg-pink-400", info: true },
           ];
 
           return `<div class="flex flex-col gap-0.5 min-w-[160px]">` + bars.map(b => {
               const pct = Math.round((b.score / b.max) * 100);
+              const muted = b.info ? ' opacity-50' : '';
               return `
-                  <div class="flex items-center gap-1" title="${b.label}: ${b.score}/${b.max}">
+                  <div class="flex items-center gap-1${muted}" title="${b.label}: ${b.score}/${b.max}${b.info ? ' (informational)' : ''}">
                       <span class="text-xs text-slate-400 w-9 text-right flex-shrink-0">${b.label}</span>
                       <div class="flex-1 bg-slate-100 rounded-full h-1.5" style="min-width:60px">
                           <div class="${b.color} h-1.5 rounded-full transition-all duration-500" style="width:${pct}%"></div>
@@ -1646,12 +1708,15 @@
               green:  "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
               yellow: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
               red:    "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20",
+              blue:   "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
               grey:   "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-400/20",
           };
           return signals.map(s => {
               const cls = colorMap[s.color] || colorMap.grey;
               const size = compact ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2 py-1";
-              return `<span class="${cls} ${size} rounded-full whitespace-nowrap inline-flex items-center" title="${escapeHtml(s.label)}">${escapeHtml(s.label)}</span>`;
+              const isTip = s.type === "tip";
+              const label = isTip ? `💡 ${s.label}` : s.label;
+              return `<span class="${cls} ${size} rounded-full whitespace-nowrap inline-flex items-center" title="${escapeHtml(s.label)}">${escapeHtml(label)}</span>`;
           }).join(" ");
       }
 
@@ -1677,8 +1742,8 @@
           }
           if (soft.length) {
               html += `<div class="knockout-soft">
-                  <div class="text-amber-500 font-semibold text-sm mb-1">⚠️ Soft Flag${soft.length > 1 ? "s" : ""}</div>
-                  ${soft.map(f => `<div class="text-amber-400 text-xs mt-1">• ${escapeHtml(f.reason)}</div>`).join("")}
+                  <div class="text-white font-semibold text-sm mb-1">⚠️ Soft Flag${soft.length > 1 ? "s" : ""}</div>
+                  ${soft.map(f => `<div class="text-white text-xs mt-1">• ${escapeHtml(f.reason)}</div>`).join("")}
               </div>`;
           }
           return html;
@@ -1691,8 +1756,8 @@
           const score = candidate.match_score ?? 0;
 
           const ringColor = hardKnockout ? "text-red-500"
-              : score >= 70 ? "text-emerald-600"
-              : score >= 45 ? "text-amber-600"
+              : score >= 65 ? "text-emerald-600"
+              : score >= 35 ? "text-amber-600"
               : "text-red-500";
 
           let html = `
@@ -1711,24 +1776,25 @@
 
           if (bd) {
               const components = [
-                  { label: "Experience",   total: bd.experience?.total ?? 0,             max: 25, color: "bg-blue-500",   detail: `${bd.experience?.total_exp ?? 0} career + ${bd.experience?.domain_exp ?? 0} domain` },
-                  { label: "Skills",       total: bd.skills?.total ?? 0,                 max: 35, color: "bg-violet-500", detail: `${bd.skills?.required ?? 0} required + ${bd.skills?.nice_to_have ?? 0} bonus + ${bd.skills?.depth_recency ?? 0} depth` },
-                  { label: "Education",    total: bd.education?.total ?? 0,              max: 15, color: "bg-amber-500",  detail: `${bd.education?.degree ?? 0} degree + ${bd.education?.field_relevance ?? 0} field` },
-                  { label: "Role Level",   total: bd.role_level?.total ?? 0,             max: 10, color: "bg-teal-500",   detail: `Seniority alignment` },
-                  { label: "Application",  total: bd.application_quality?.total ?? 0,    max: 15, color: "bg-pink-500",   detail: `CL: ${bd.application_quality?.cover_letter ?? 0} · Portfolio: ${bd.application_quality?.portfolio ?? 0} · LinkedIn: ${bd.application_quality?.linkedin ?? 0} · Q&A: ${bd.application_quality?.custom_answers ?? 0}` },
+                  { label: "Skills",       total: bd.skills?.total ?? 0,                 max: 50, color: "bg-violet-500", detail: `${bd.skills?.required ?? 0} required + ${bd.skills?.nice_to_have ?? 0} bonus + ${bd.skills?.depth_recency ?? 0} depth`, scored: true },
+                  { label: "Experience",   total: bd.experience?.total ?? 0,             max: 30, color: "bg-blue-500",   detail: `${bd.experience?.total_exp ?? 0} career + ${bd.experience?.domain_exp ?? 0} domain`, scored: true },
+                  { label: "Education",    total: bd.education?.total ?? 0,              max: 20, color: "bg-amber-500",  detail: `${bd.education?.degree ?? 0} degree + ${bd.education?.field_relevance ?? 0} field`, scored: true },
+                  { label: "Role Level",   total: bd.role_level?.total ?? 0,             max: 10, color: "bg-teal-500",   detail: `Seniority alignment`, scored: false },
+                  { label: "Application",  total: bd.application_quality?.total ?? 0,    max: 15, color: "bg-pink-500",   detail: `CL: ${bd.application_quality?.cover_letter ?? 0} · Portfolio: ${bd.application_quality?.portfolio ?? 0} · LinkedIn: ${bd.application_quality?.linkedin ?? 0} · Q&A: ${bd.application_quality?.custom_answers ?? 0}`, scored: false },
               ];
 
               html += `<div class="space-y-3 mb-4">`;
               components.forEach(comp => {
                   const pct = Math.round((comp.total / comp.max) * 100);
+                  const muted = !comp.scored;
                   html += `
-                      <div>
+                      <div${muted ? ' class="opacity-60"' : ''}>
                           <div class="flex justify-between text-xs mb-1">
-                              <span class="text-slate-300 font-medium">${comp.label}</span>
+                              <span class="text-slate-300 font-medium">${comp.label}${muted ? ' <span class="text-slate-500 italic font-normal">(informational only)</span>' : ''}</span>
                               <span class="text-slate-400 tabular-nums">${comp.total} / ${comp.max}</span>
                           </div>
                           <div class="bg-slate-600/30 rounded-full h-2">
-                              <div class="${comp.color} h-2 rounded-full score-bar-fill" style="width:${pct}%"></div>
+                              <div class="${comp.color} h-2 rounded-full score-bar-fill${muted ? ' opacity-50' : ''}" style="width:${pct}%"></div>
                           </div>
                           <div class="text-slate-500 text-xs mt-0.5">${comp.detail}</div>
                       </div>`;
@@ -1771,11 +1837,14 @@
               green:  "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20",
               yellow: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
               red:    "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20",
+              blue:   "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
               grey:   "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-400/20",
           };
           const badges = signals.map(s => {
               const cls = colorMap[s.color] || colorMap.grey;
-              return `<span class="${cls} text-xs px-2 py-1 rounded-full inline-flex items-center">${escapeHtml(s.label)}</span>`;
+              const isTip = s.type === "tip";
+              const label = isTip ? `💡 ${s.label}` : s.label;
+              return `<span class="${cls} text-xs px-2 py-1 rounded-full inline-flex items-center">${escapeHtml(label)}</span>`;
           }).join("");
           return `
               <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 mb-4">
@@ -1794,11 +1863,11 @@
 
         let statusBadge;
         if (isShortlisted) {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>Shortlisted</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>Strong Match</span>`;
         } else if (isReview) {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>Review</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>Potential</span>`;
         } else {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Rejected</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>Filtered Out</span>`;
         }
 
         const barColor   = isShortlisted ? "bg-emerald-500" : isReview ? "bg-amber-400" : "bg-red-400";
@@ -1850,7 +1919,7 @@
               ${getStageBadgeHtml(c.pipeline_stage)}
             </td>
             <td class="px-4 py-4">${aiScoresHtml}</td>
-            <td class="px-6 py-4 max-w-xs"><p class="text-xs text-slate-500 leading-relaxed line-clamp-3">${escapeHtml(c.summary || "")}</p></td>
+            <td class="px-6 py-4 max-w-xs"><p class="text-xs text-slate-500 leading-relaxed line-clamp-3">${(() => { const s = parseCandidateSummary(c); const txt = s?.candidate_summary || (typeof c.summary === 'string' ? c.summary : '') || ''; return escapeHtml(txt.length > 80 ? txt.slice(0, 80) + '…' : txt); })()}</p></td>
             <td class="px-4 py-4 text-center" onclick="event.stopPropagation()">
               <div class="flex items-center justify-center gap-1.5">
                 <button
@@ -2733,7 +2802,13 @@
       // ==========================================
       async function deleteJob(jobId, jobTitle, event) {
         if (event) event.stopPropagation();
-        if (!confirm(`Delete "${jobTitle}"?\n\nThis will permanently delete the job posting and ALL applicant data. This cannot be undone.`)) return;
+        const confirmed = await showConfirmDialog(
+          "Delete Job",
+          `Are you sure you want to permanently delete <strong>${escapeHtml(jobTitle)}</strong> and ALL its applicant data? This cannot be undone.`,
+          "Delete",
+          "red"
+        );
+        if (!confirmed) return;
         try {
           const res = await Auth.authFetch(`/jobs/${jobId}`, { method: "DELETE" });
           if (res.ok || res.status === 204) {
@@ -2745,13 +2820,14 @@
             // If the deleted job is currently open in the pipeline view, return to dashboard
             const openId = selectedJob ? (selectedJob.db_job_id || selectedJob.id) : null;
             if (openId === jobId) selectedJob = null;
+            showToast("Job deleted", "success");
             showDashboard();
           } else {
             const body = await res.json().catch(() => ({}));
-            alert(`Failed to delete job: ${body.detail || res.statusText}`);
+            showToast(`Failed to delete job: ${body.detail || res.statusText}`, "error");
           }
         } catch (err) {
-          alert(`Error deleting job: ${err.message}`);
+          showToast(`Error deleting job: ${err.message}`, "error");
         }
       }
 
@@ -3132,11 +3208,11 @@
 
         let statusBadge;
         if (status === "shortlisted") {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Shortlisted</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Strong Match</span>`;
         } else if (status === "review") {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Review</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Potential</span>`;
         } else {
-          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Rejected</span>`;
+          statusBadge = `<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/20"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Filtered Out</span>`;
         }
 
         const skillsArr = getCandidateSkillList(c);
@@ -3159,6 +3235,8 @@
               <span class="pipeline-stage-badge ${stageColors.bg} ${stageColors.text} ring-1 ring-inset ${stageColors.ring}">${escapeHtml(currentStage)}</span>
             </div>
           </div>
+
+          ${renderAISummarySection(c)}
 
           <div class="grid grid-cols-1 gap-4 mb-6">
             <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
@@ -3190,12 +3268,6 @@
             <div class="flex flex-wrap gap-1.5">${skillTags}</div>
           </div>` : ""}
 
-          ${c.summary ? `
-          <div class="mb-6">
-            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">AI Summary</div>
-            <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(c.summary)}</p>
-          </div>` : ""}
-
           ${(c.portfolio_url || c.linkedin_url) ? `
           <div class="mb-6">
             <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Links</div>
@@ -3221,9 +3293,9 @@
               <select id="detail-status-select"
                 class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300">
                 <option value="">— Keep current status —</option>
-                <option value="shortlisted" ${c.status === 'shortlisted' ? 'selected' : ''}>Shortlisted</option>
-                <option value="review" ${c.status === 'review' ? 'selected' : ''}>Needs Review</option>
-                <option value="rejected" ${c.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                <option value="shortlisted" ${c.status === 'shortlisted' ? 'selected' : ''}>Strong Match</option>
+                <option value="review" ${c.status === 'review' ? 'selected' : ''}>Potential</option>
+                <option value="rejected" ${c.status === 'rejected' ? 'selected' : ''}>Filtered Out</option>
               </select>
               <button onclick="applyStatusOverride(${c.id})"
                 class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-slate-900 hover:bg-slate-700 text-white rounded-lg transition-colors">

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 from datetime import date
+import math
 
 # ==============================================================================
 # CONSTANTS — single source of truth for all scoring logic
@@ -11,12 +12,15 @@ from datetime import date
 
 CURRENT_YEAR = 2026
 
+# Semantic fallback threshold for embedding-based skill matching.
+# Tune upward (e.g. 0.85) if matches are too aggressive, or downward
+# (e.g. 0.78) if obvious synonym matches are being missed.
+SEMANTIC_SIMILARITY_THRESHOLD = 0.82
+
 SCORE_WEIGHTS = {
-    "experience": 25,
-    "skills": 35,
-    "education": 15,
-    "role_level": 10,
-    "application_quality": 15,
+    "skills": 50,
+    "experience": 30,
+    "education": 20,
 }
 
 DEGREE_RANK = {
@@ -111,6 +115,51 @@ SKILL_ALIASES = {
     "docker": ["docker container", "containerization"],
     "vue": ["vuejs", "vue.js", "vue js"],
     "angular": ["angularjs", "angular.js", "angular js"],
+    "customer service": [
+        "client relations", "customer success", "client service",
+        "customer satisfaction", "customer support", "customer care",
+        "client support", "customer relations",
+    ],
+    "quota attainment": [
+        "hitting quota", "exceeding targets", "revenue targets",
+        "sales targets", "target achievement", "sales quota",
+        "quota achievement", "exceeding quota",
+    ],
+    "crm": [
+        "salesforce", "hubspot", "zoho", "pipedrive",
+        "microsoft dynamics", "dynamics 365", "crm software",
+        "customer relationship management",
+    ],
+    "negotiation": [
+        "contract negotiation", "deal closing", "closing skills",
+        "closing deals", "price negotiation", "sales negotiation",
+    ],
+    "cold calling": [
+        "cold outreach", "outbound calling", "outbound prospecting",
+        "teleprospecting", "cold emailing", "cold outbound",
+    ],
+    "account management": [
+        "client management", "relationship management",
+        "account executive", "key account management",
+        "strategic accounts", "client retention",
+    ],
+    "b2b sales": [
+        "business to business", "enterprise sales", "corporate sales",
+        "b2b", "business-to-business",
+    ],
+    "lead generation": [
+        "prospecting", "pipeline building", "demand generation",
+        "lead gen", "lead sourcing", "business development",
+    ],
+    "presentation skills": [
+        "public speaking", "client presentations", "sales presentations",
+        "presenting", "keynote speaking", "pitch presentations",
+    ],
+    "microsoft office": [
+        "ms office", "word", "excel", "powerpoint", "office suite",
+        "microsoft word", "microsoft excel", "microsoft powerpoint",
+        "ms word", "ms excel", "ms powerpoint", "office 365",
+    ],
 }
 
 
@@ -129,6 +178,101 @@ def normalize_skill(skill: str) -> str:
         if cleaned == canonical or cleaned in aliases:
             return canonical
     return cleaned
+
+
+def cosine_similarity(vector_a: list[float], vector_b: list[float]) -> float:
+    """
+    Compute cosine similarity between two numeric vectors.
+
+    Returns 0.0 when vectors are different lengths, empty, non-numeric, or
+    when either vector has zero magnitude.
+    """
+    if not vector_a or not vector_b:
+        return 0.0
+    if len(vector_a) != len(vector_b):
+        return 0.0
+
+    dot_product = 0.0
+    magnitude_a = 0.0
+    magnitude_b = 0.0
+
+    for value_a, value_b in zip(vector_a, vector_b):
+        try:
+            a = float(value_a)
+            b = float(value_b)
+        except (TypeError, ValueError):
+            return 0.0
+
+        dot_product += a * b
+        magnitude_a += a * a
+        magnitude_b += b * b
+
+    if magnitude_a == 0.0 or magnitude_b == 0.0:
+        return 0.0
+
+    similarity = dot_product / (math.sqrt(magnitude_a) * math.sqrt(magnitude_b))
+    return max(-1.0, min(1.0, similarity))
+
+
+def _lookup_embedding(skill_name: str, embedding_map: dict) -> list[float] | None:
+    """Return embedding vector by exact key first, then case-insensitive lookup."""
+    if not isinstance(skill_name, str) or not isinstance(embedding_map, dict):
+        return None
+
+    direct = embedding_map.get(skill_name)
+    if isinstance(direct, list):
+        return direct
+
+    needle = skill_name.strip().lower()
+    if not needle:
+        return None
+
+    for key, vector in embedding_map.items():
+        if not isinstance(key, str) or not isinstance(vector, list):
+            continue
+        if key.strip().lower() == needle:
+            return vector
+
+    return None
+
+
+def find_semantic_match(
+    required_skill_name: str,
+    candidate_skill_embeddings: dict,
+    required_skill_embeddings: dict,
+    similarity_threshold: float = SEMANTIC_SIMILARITY_THRESHOLD,
+) -> str | None:
+    """
+    Find the best semantic candidate skill match for a required skill.
+
+    Returns the candidate skill name with highest cosine similarity when that
+    score meets or exceeds the threshold; otherwise returns None.
+    """
+    required_embedding = _lookup_embedding(required_skill_name, required_skill_embeddings)
+    if required_embedding is None:
+        return None
+
+    best_candidate_name: str | None = None
+    best_similarity = -1.0
+
+    for candidate_skill_name, candidate_embedding in (candidate_skill_embeddings or {}).items():
+        if not isinstance(candidate_skill_name, str):
+            continue
+        if not isinstance(candidate_embedding, list):
+            continue
+
+        similarity = cosine_similarity(required_embedding, candidate_embedding)
+        if similarity > best_similarity:
+            best_similarity = similarity
+            best_candidate_name = candidate_skill_name
+
+    if best_candidate_name is None:
+        return None
+
+    if best_similarity < similarity_threshold:
+        return None
+
+    return best_candidate_name
 
 
 def extract_seniority_level(title: str) -> int:
@@ -212,6 +356,8 @@ def score_skills(
     required_skills: list,
     nice_to_have_skills: list,
     job_seniority_level: int,
+    required_skill_embeddings: dict | None = None,
+    candidate_skill_embeddings: dict | None = None,
 ) -> dict:
     """
     Returns:
@@ -224,16 +370,68 @@ def score_skills(
         "missing_required": list,
     }
     """
-    candidate_skill_map = {
-        normalize_skill(s["name"]): s
-        for s in (skills_detailed or [])
-        if s.get("name")
-    }
-    normalized_required = [normalize_skill(s) for s in (required_skills or [])]
-    normalized_nice = [normalize_skill(s) for s in (nice_to_have_skills or [])]
+    candidate_skill_map: dict[str, dict] = {}
+    candidate_skill_name_map: dict[str, dict] = {}
+    for skill in (skills_detailed or []):
+        raw_name = skill.get("name")
+        if not raw_name:
+            continue
+        skill_name = str(raw_name).strip()
+        if not skill_name:
+            continue
+        candidate_skill_map[normalize_skill(skill_name)] = skill
+        candidate_skill_name_map[skill_name.lower()] = skill
 
-    matched_required = [s for s in normalized_required if s in candidate_skill_map]
-    missing_required = [s for s in normalized_required if s not in candidate_skill_map]
+    required_skill_entries: list[tuple[str, str]] = []
+    for required_skill in (required_skills or []):
+        required_skill_name = str(required_skill).strip()
+        if not required_skill_name:
+            continue
+        required_skill_entries.append(
+            (required_skill_name, normalize_skill(required_skill_name))
+        )
+
+    normalized_required = [normalized for _, normalized in required_skill_entries]
+    normalized_nice = [normalize_skill(str(s).strip()) for s in (nice_to_have_skills or []) if str(s).strip()]
+
+    required_embeddings = (
+        required_skill_embeddings if isinstance(required_skill_embeddings, dict) else {}
+    )
+    candidate_embeddings = (
+        candidate_skill_embeddings if isinstance(candidate_skill_embeddings, dict) else {}
+    )
+    semantic_enabled = bool(required_embeddings) and bool(candidate_embeddings)
+
+    matched_required: list[str] = []
+    missing_required: list[str] = []
+    matched_candidate_by_required: dict[str, dict] = {}
+
+    for required_skill_name, normalized_required_name in required_skill_entries:
+        alias_match = candidate_skill_map.get(normalized_required_name)
+        if alias_match is not None:
+            matched_required.append(normalized_required_name)
+            matched_candidate_by_required[normalized_required_name] = alias_match
+            continue
+
+        semantic_match_name = None
+        if semantic_enabled:
+            semantic_match_name = find_semantic_match(
+                required_skill_name=required_skill_name,
+                candidate_skill_embeddings=candidate_embeddings,
+                required_skill_embeddings=required_embeddings,
+                similarity_threshold=SEMANTIC_SIMILARITY_THRESHOLD,
+            )
+
+        if semantic_match_name is None:
+            missing_required.append(normalized_required_name)
+            continue
+
+        matched_required.append(normalized_required_name)
+        matched_candidate_skill = candidate_skill_name_map.get(semantic_match_name.strip().lower())
+        if matched_candidate_skill is None:
+            matched_candidate_skill = candidate_skill_map.get(normalize_skill(semantic_match_name))
+        if matched_candidate_skill is not None:
+            matched_candidate_by_required[normalized_required_name] = matched_candidate_skill
 
     if normalized_required:
         required_score = round((len(matched_required) / len(normalized_required)) * 20)
@@ -251,7 +449,9 @@ def score_skills(
     else:
         total_weight = 0.0
         for skill_name in matched_required:
-            skill = candidate_skill_map[skill_name]
+            skill = matched_candidate_by_required.get(skill_name)
+            if not skill:
+                continue
             years_used = skill.get("years_used") or 0
             last_used_year = skill.get("last_used_year")
 
@@ -492,15 +692,17 @@ def calculate_role_level_score(candidate_jobs: list, job_title: str) -> int:
         return 0
 
 
-def generate_candidate_signals(candidate_data: dict) -> list:
+def generate_candidate_signals(candidate_data: dict, job_config: dict | None = None) -> list:
     """
     Produce a list of UI-ready signal badges from the extraction data.
 
     Each signal is a dict with keys: type, level, color, label.
     candidate_data should be the extraction result dict, optionally
     enriched with form-submission fields (linkedin_url, portfolio_url, etc.).
+    job_config, when provided, enables recruiter-tip signals.
     """
     signals: list[dict] = []
+    jc = job_config or {}
 
     # ── Tenure stability ──────────────────────────────────────────────────
     avg_tenure = float(candidate_data.get("average_tenure_years") or 0)
@@ -558,29 +760,111 @@ def generate_candidate_signals(candidate_data: dict) -> list:
         "color": color, "label": f"Resume completeness {completeness}/5",
     })
 
+    # ── Recruiter tips (from job_config context) ──────────────────────────
+    if jc:
+        total_years = float(candidate_data.get("total_years_experience") or 0)
+        min_experience = float(jc.get("min_experience") or 0)
+        job_title = jc.get("title") or ""
+
+        # Overqualification tip
+        if total_years > min_experience + 5:
+            signals.append({
+                "type": "overqualification_tip", "level": "info",
+                "color": "blue",
+                "label": (
+                    f"Candidate has {int(total_years)} years experience, "
+                    f"role requires {int(min_experience)} — recruiter to confirm role expectations"
+                ),
+            })
+
+        # Skills gap tip
+        required_skills = jc.get("required_skills") or []
+        if required_skills:
+            candidate_skills_normalized = {
+                normalize_skill(s["name"])
+                for s in (candidate_data.get("skills_detailed") or [])
+                if s.get("name")
+            }
+            normalized_required = [normalize_skill(s) for s in required_skills]
+            missing = [s for s in normalized_required if s not in candidate_skills_normalized]
+            match_rate = 1.0 - (len(missing) / len(normalized_required)) if normalized_required else 1.0
+            if match_rate < 0.4:
+                signals.append({
+                    "type": "skills_gap_tip", "level": "info",
+                    "color": "blue",
+                    "label": (
+                        f"Candidate missing required skills: {', '.join(missing)} — "
+                        f"recruiter to assess transferable experience"
+                    ),
+                })
+
+        # Location history tip
+        work_location = jc.get("work_location_type")
+        if work_location == "On-site" and len(jobs) >= 2:
+            recent_remote = sum(
+                1 for j in jobs[:3]
+                if (j.get("work_type") or "").lower() == "remote"
+            )
+            if recent_remote >= 2:
+                signals.append({
+                    "type": "location_tip", "level": "info",
+                    "color": "blue",
+                    "label": "Candidate's recent roles are remote, this position is on-site — recruiter to discuss",
+                })
+
+        # Seniority delta tip
+        if jobs:
+            current_job = next((j for j in jobs if j.get("is_current")), jobs[0])
+            candidate_title = current_job.get("title", "")
+            candidate_level = extract_seniority_level(candidate_title)
+            job_level = extract_seniority_level(job_title)
+            if abs(candidate_level - job_level) >= 2:
+                signals.append({
+                    "type": "seniority_tip", "level": "info",
+                    "color": "blue",
+                    "label": (
+                        f"Currently holds '{candidate_title}' title, "
+                        f"role is '{job_title}' — recruiter to assess fit"
+                    ),
+                })
+
+        # Missing portfolio tip
+        if jc.get("require_portfolio") and not candidate_data.get("portfolio_url"):
+            signals.append({
+                "type": "portfolio_tip", "level": "info",
+                "color": "blue",
+                "label": "Portfolio was required but not submitted",
+            })
+
+        # Missing LinkedIn tip
+        if jc.get("require_linkedin") and not candidate_data.get("linkedin_url"):
+            signals.append({
+                "type": "linkedin_tip", "level": "info",
+                "color": "blue",
+                "label": "LinkedIn profile was required but not submitted",
+            })
+
     return signals
 
 
 def assign_bucket(score: int, has_hard_knockout: bool) -> str:
     """
-    Map a total score + knockout flag to a pipeline bucket.
-    Returns one of: "Rejected", "Shortlisted", "Needs Review".
+    Map a total score + knockout flag to a prescreening bucket.
+    Returns one of: "Filtered Out", "Strong Match", "Potential".
     """
     if has_hard_knockout:
-        return "Rejected"
-    elif score >= 70:
-        return "Shortlisted"
-    elif score >= 45:
-        return "Needs Review"
+        return "Filtered Out"
+    elif score >= 65:
+        return "Strong Match"
     else:
-        return "Rejected"
+        return "Potential"
 
 
 # ── Bucket → legacy status mapping used by the Celery tasks ───────────────
 _BUCKET_TO_STATUS = {
-    "Rejected": "rejected",
-    "Shortlisted": "shortlisted",
-    "Needs Review": "review",
+    "Strong Match": "shortlisted",
+    "Potential": "review",
+    "Filtered Out": "rejected",
 }
 
 
@@ -596,6 +880,8 @@ def bucket_to_status(bucket: str, has_hard_knockout: bool) -> str:
 def calculate_deterministic_score(
     candidate_data: dict,
     job_config: dict,
+    required_skill_embeddings: dict | None = None,
+    candidate_skill_embeddings: dict | None = None,
 ) -> tuple[int, dict]:
     """
     Orchestrate all five scoring components and return (total_score, breakdown).
@@ -635,7 +921,7 @@ def calculate_deterministic_score(
     require_linkedin = bool(job_config.get("require_linkedin"))
     custom_questions = job_config.get("custom_questions") or []
 
-    # 1. Experience (25 pts)
+    # 1. Experience (30 pts)
     exp_result = score_experience(
         total_years=total_years,
         required_years=min_experience,
@@ -644,16 +930,18 @@ def calculate_deterministic_score(
         overqualification_penalty=False,
     )
 
-    # 2. Skills (35 pts)
+    # 2. Skills (50 pts)
     job_seniority = extract_seniority_level(job_title)
     skills_result = score_skills(
         skills_detailed=skills_detailed,
         required_skills=required_skills,
         nice_to_have_skills=nice_to_have_skills,
         job_seniority_level=job_seniority,
+        required_skill_embeddings=required_skill_embeddings,
+        candidate_skill_embeddings=candidate_skill_embeddings,
     )
 
-    # 3. Education (15 pts)
+    # 3. Education (20 pts)
     edu_result = calculate_education_score(
         extracted_education=candidate_education,
         required_education=required_education,
@@ -661,13 +949,13 @@ def calculate_deterministic_score(
         job_department=department,
     )
 
-    # 4. Role level fit (10 pts)
+    # 4. Role level fit (informational only — not added to score)
     role_level = calculate_role_level_score(
         candidate_jobs=candidate_jobs,
         job_title=job_title,
     )
 
-    # 5. Application quality (15 pts)
+    # 5. Application quality (informational only — not added to score)
     app_quality = calculate_application_quality_score(
         cover_letter=candidate_data.get("cover_letter"),
         cover_letter_analysis=candidate_data.get("cover_letter_analysis"),
@@ -680,41 +968,47 @@ def calculate_deterministic_score(
         custom_questions=custom_questions,
     )
 
-    # --- assemble ---
-    total_score = (
-        exp_result["total"]
-        + skills_result["total"]
-        + edu_result["total"]
-        + role_level
-        + app_quality["total"]
-    )
+    # --- assemble (only experience + skills + education contribute) ---
+    # Scale sub-scores to new weight targets:
+    #   experience: 25-pt raw → 30-pt weighted
+    #   skills:     35-pt raw → 50-pt weighted
+    #   education:  15-pt raw → 20-pt weighted
+    scaled_exp = round(exp_result["total"] * (30 / 25))
+    scaled_skills = round(skills_result["total"] * (50 / 35))
+    scaled_edu = round(edu_result["total"] * (20 / 15))
+
+    total_score = scaled_exp + scaled_skills + scaled_edu
     total_score = max(0, min(100, total_score))
 
     score_breakdown = {
         "experience": {
             "total_exp": exp_result["total_exp_score"],
             "domain_exp": exp_result["domain_exp_score"],
-            "total": exp_result["total"],
-            "max": 25,
+            "total": scaled_exp,
+            "max": 30,
+            "affects_score": True,
         },
         "skills": {
             "required": skills_result["required_score"],
             "nice_to_have": skills_result["nice_to_have_score"],
             "depth_recency": skills_result["depth_recency_score"],
-            "total": skills_result["total"],
-            "max": 35,
+            "total": scaled_skills,
+            "max": 50,
             "matched_required": skills_result["matched_required"],
             "missing_required": skills_result["missing_required"],
+            "affects_score": True,
         },
         "education": {
             "degree": edu_result["degree_score"],
             "field_relevance": edu_result["field_score"],
-            "total": edu_result["total"],
-            "max": 15,
+            "total": scaled_edu,
+            "max": 20,
+            "affects_score": True,
         },
         "role_level": {
             "total": role_level,
             "max": 10,
+            "affects_score": False,
         },
         "application_quality": {
             "cover_letter": app_quality["cover_letter_score"],
@@ -723,6 +1017,7 @@ def calculate_deterministic_score(
             "custom_answers": app_quality["custom_answers_score"],
             "total": app_quality["total"],
             "max": 15,
+            "affects_score": False,
         },
     }
 
@@ -754,12 +1049,10 @@ def evaluate_knockout_filters(
     """
     flags: list[dict] = []
 
-    jobs = candidate_data.get("jobs") or []
     total_years = float(candidate_data.get("total_years_experience") or 0)
     min_experience = float(job_config.get("min_experience") or 0)
-    job_title = job_config.get("title") or ""
 
-    # ── HARD knockouts ────────────────────────────────────────────────────
+    # ── HARD knockouts only ───────────────────────────────────────────────
     requires_visa = (
         candidate_data.get("requires_visa_sponsorship")
         or candidate_data.get("requires_sponsorship")
@@ -771,13 +1064,15 @@ def evaluate_knockout_filters(
             "reason": "Candidate requires visa sponsorship but role does not offer it",
         })
 
-    if total_years == 0 and min_experience >= 3:
+    # Experience floor with 2-year buffer: hard floor = max(0, required - 2)
+    experience_floor = max(0, min_experience - 2)
+    if total_years < experience_floor:
         flags.append({
             "type": "insufficient_experience",
             "severity": "hard",
             "reason": (
-                f"Candidate has 0 years experience, "
-                f"role requires {int(min_experience)}"
+                f"Candidate has {total_years:.1f} years experience, "
+                f"minimum floor is {experience_floor:.0f} (role requires {int(min_experience)})"
             ),
         })
 
@@ -801,75 +1096,6 @@ def evaluate_knockout_filters(
             "type": "unreadable_resume",
             "severity": "hard",
             "reason": "Resume PDF could not be parsed — flagged for manual review",
-        })
-
-    # ── SOFT knockouts ────────────────────────────────────────────────────
-    if total_years > min_experience + 5:
-        flags.append({
-            "type": "overqualified",
-            "severity": "soft",
-            "reason": (
-                f"Candidate has {int(total_years)} years, "
-                f"role requires {int(min_experience)}"
-            ),
-        })
-
-    required_skills = job_config.get("required_skills") or []
-    if required_skills:
-        candidate_skills_normalized = {
-            normalize_skill(s["name"])
-            for s in (candidate_data.get("skills_detailed") or [])
-            if s.get("name")
-        }
-        normalized_required = [normalize_skill(s) for s in required_skills]
-        matched = [s for s in normalized_required if s in candidate_skills_normalized]
-        match_rate = len(matched) / len(normalized_required) if normalized_required else 1.0
-        if match_rate < 0.4:
-            flags.append({
-                "type": "skills_gap",
-                "severity": "soft",
-                "reason": (
-                    f"Candidate matches only {round(match_rate * 100)}% "
-                    f"of required skills"
-                ),
-            })
-
-    work_location = job_config.get("work_location_type")
-    if work_location == "On-site" and len(jobs) >= 2:
-        recent_remote = sum(
-            1 for j in jobs[:3]
-            if (j.get("work_type") or "").lower() == "remote"
-        )
-        if recent_remote >= 2:
-            flags.append({
-                "type": "location_mismatch",
-                "severity": "soft",
-                "reason": "Recent roles are remote but position requires on-site",
-            })
-
-    if jobs:
-        current_job = next((j for j in jobs if j.get("is_current")), jobs[0])
-        candidate_level = extract_seniority_level(current_job.get("title", ""))
-        job_level = extract_seniority_level(job_title)
-        if abs(candidate_level - job_level) >= 2:
-            flags.append({
-                "type": "level_mismatch",
-                "severity": "soft",
-                "reason": "Candidate seniority level does not align with role requirements",
-            })
-
-    if job_config.get("require_portfolio") and not candidate_data.get("portfolio_url"):
-        flags.append({
-            "type": "missing_portfolio",
-            "severity": "soft",
-            "reason": "Portfolio URL required but not submitted",
-        })
-
-    if job_config.get("require_linkedin") and not candidate_data.get("linkedin_url"):
-        flags.append({
-            "type": "missing_linkedin",
-            "severity": "soft",
-            "reason": "LinkedIn URL required but not submitted",
         })
 
     return flags

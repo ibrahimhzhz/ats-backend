@@ -86,6 +86,7 @@ class Job(Base):
     
     # Level 1: Structured JD requirements baseline
     jd_requirements = Column(JSON, nullable=True)  # {must_have_skills, minimum_years_experience, education_requirement, offers_visa_sponsorship}
+    required_skill_embeddings = Column(JSON, nullable=True)  # {skill_name: [float, ...]}
 
     # Redesigned job posting form fields
     department = Column(String, nullable=True)
@@ -133,6 +134,7 @@ class Applicant(Base):
     # AI Extracted Data
     years_experience = Column(Integer)
     skills = Column(JSON)  # Extracted skills ["Python", "FastAPI"]
+    skill_embeddings = Column(JSON, nullable=True)  # {skill_name: [float, ...]}
 
     # Scoring
     match_score = Column(Integer)
