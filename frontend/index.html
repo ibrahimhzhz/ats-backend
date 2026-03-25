@@ -958,10 +958,18 @@
               // Merge result counts from DB if local data is stale
               if (bulk.results) {
                 const br = bulk.results;
+                if (!storedJob.results) storedJob.results = {};
+                storedJob.results = {
+                  ...storedJob.results,
+                  ...br,
+                };
                 storedJob.total_processed  = br.total_processed || storedJob.total_processed || 0;
                 storedJob.shortlisted_count = br.shortlisted_count || storedJob.shortlisted_count || 0;
                 storedJob.review_count      = br.review_count || storedJob.review_count || 0;
                 storedJob.rejected_count    = br.rejected_count || storedJob.rejected_count || 0;
+                storedJob.duplicates_skipped = br.duplicates_skipped || storedJob.duplicates_skipped || 0;
+                storedJob.knocked_out = br.knocked_out || br.knockout_count || storedJob.knocked_out || 0;
+                storedJob.scored = br.scored || storedJob.scored || 0;
               }
             }
           });
@@ -989,6 +997,9 @@
                 shortlisted_count: bulkResults.shortlisted_count || 0,
                 review_count: bulkResults.review_count || 0,
                 rejected_count: bulkResults.rejected_count || 0,
+                duplicates_skipped: bulkResults.duplicates_skipped || 0,
+                knocked_out: bulkResults.knocked_out || bulkResults.knockout_count || 0,
+                scored: bulkResults.scored || 0,
                 views: liveJob.views || 0,
                 application_count: liveJob.application_count || 0,
                 results: {
@@ -996,6 +1007,9 @@
                   shortlisted_count: bulkResults.shortlisted_count || 0,
                   review_count: bulkResults.review_count || 0,
                   rejected_count: bulkResults.rejected_count || 0,
+                  duplicates_skipped: bulkResults.duplicates_skipped || 0,
+                  knocked_out: bulkResults.knocked_out || bulkResults.knockout_count || 0,
+                  scored: bulkResults.scored || 0,
                   all_candidates: [],
                   criteria: {
                     min_experience: liveJob.min_experience,
@@ -1171,11 +1185,15 @@
             const shortlisted = allCandidates.filter(c => c.match_score >= 65 || c.status === 'shortlisted').length;
             const review = allCandidates.filter(c => (c.match_score >= 35 && c.match_score < 65) || c.status === 'review').length;
             const rejected = allCandidates.filter(c => c.match_score < 35 || c.status === 'rejected').length;
+            const knockedOut = allCandidates.filter(c => c.status === 'knockout').length;
+            const scored = Math.max(0, allCandidates.length - knockedOut);
             
             job.results.total_processed = allCandidates.length;
             job.results.shortlisted_count = shortlisted;
             job.results.review_count = review;
             job.results.rejected_count = rejected;
+            job.results.knocked_out = knockedOut;
+            job.results.scored = scored;
             
             // Update stats display
             selectedJob = job;
@@ -1388,11 +1406,13 @@
       // ==========================================
       function renderPipelineStats(job) {
         const d = job.results || {};
+        const knockedOutCount = d.knocked_out || d.knockout_count || 0;
+        const scoredCount = d.scored || Math.max(0, (d.total_processed || 0) - knockedOutCount);
         const stats = [
           { label: "Total Processed",    value: d.total_processed || 0,          accent: "text-slate-800",   ring: "border-slate-200",  bg: "bg-white" },
           { label: "Duplicates Skipped", value: d.duplicates_skipped || 0,  accent: "text-sky-700",     ring: "border-sky-200",    bg: "bg-sky-50" },
-          { label: "Rule Knockout",      value: d.knocked_out || 0,         accent: "text-amber-700",   ring: "border-amber-200",  bg: "bg-amber-50" },
-          { label: "Scored",             value: d.scored || 0,              accent: "text-blue-700",    ring: "border-blue-200",   bg: "bg-blue-50" },
+          { label: "Rule Knockout",      value: knockedOutCount,            accent: "text-amber-700",   ring: "border-amber-200",  bg: "bg-amber-50" },
+          { label: "Scored",             value: scoredCount,                accent: "text-blue-700",    ring: "border-blue-200",   bg: "bg-blue-50" },
           { label: "Strong Match",        value: d.shortlisted_count || 0,        accent: "text-emerald-700", ring: "border-emerald-200",bg: "bg-emerald-50" },
         ];
         document.getElementById("pipeline-stats").innerHTML = stats.map(s => `
