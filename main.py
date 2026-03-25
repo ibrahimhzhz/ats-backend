@@ -105,6 +105,22 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
+
+def render_template(request: Request, template_name: str, context: Dict[str, Any] | None = None):
+    """Render templates across Starlette/FastAPI signature differences."""
+    page_context = context or {}
+    try:
+        # Newer call style
+        return templates.TemplateResponse(
+            request=request,
+            name=template_name,
+            context=page_context,
+        )
+    except TypeError:
+        # Older call style expects request inside context
+        legacy_context = {"request": request, **page_context}
+        return templates.TemplateResponse(template_name, legacy_context)
+
 # Include Routers
 app.include_router(public_router.router)  # Public careers portal (must be first, no auth)
 app.include_router(auth_router.router)
@@ -124,19 +140,16 @@ def nuke_jobs_table():
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
+    return render_template(request, "index.html")
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
+    return render_template(request, "login.html")
 
 @app.get("/apply/{job_id}", response_class=HTMLResponse)
 def apply_page(request: Request, job_id: int):
     """Public careers portal application page."""
-    return templates.TemplateResponse("apply.html", {"request": request, "job_id": job_id})
-
+    return render_template(request, "apply.html", {"job_id": job_id})
 
 @app.get("/api/health")
 def health():
